@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-cairo: 'Cairo', 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+  
+  html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-cairo);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
+  }
+}
+
+/* Light & Dark Theme global overrides */
+html.light body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html.dark body {
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Orbiting Colorful Particles Animations for Logo Loader */
+@keyframes spinClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spinCounterClockwise {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.animate-spin-slow {
+  animation: spinClockwise 6s linear infinite;
+}
+
+.animate-spin-reverse-slow {
+  animation: spinCounterClockwise 8s linear infinite;
+}
+
+.animate-spin-reverse-fast {
+  animation: spinCounterClockwise 3.5s linear infinite;
+}
+
+/* Intense Pulsing Red S Glow Animation in Original Position */
+@keyframes pulseGlowRedS {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 16px #dc2626);
+    color: #ef4444;
+  }
+  50% {
+    transform: scale(1.35);
+    filter: drop-shadow(0 0 22px #ff0000) drop-shadow(0 0 38px #f43f5e);
+    color: #ff1744;
+  }
+}
+
+.animate-pulse-glow-s {
+  display: inline-block;
+  animation: pulseGlowRedS 1.2s ease-in-out infinite;
+}
