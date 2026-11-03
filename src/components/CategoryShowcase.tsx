@@ -155,9 +155,12 @@ export const CategoryShowcase: React.FC = () => {
 
         {/* Embedded Featured App Header Bar Directly Attached Below Banner */}
         <div className="p-4 sm:p-5 flex items-center justify-between gap-3 bg-white dark:bg-slate-900">
-          <div className="flex items-center gap-3.5 min-w-0">
+          <div 
+            onClick={() => navigateToView('app_detail', featuredApp)}
+            className="flex items-center gap-3.5 min-w-0 cursor-pointer group/feat"
+          >
             {/* Squircle App Icon */}
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center text-amber-500 font-black text-2xl shadow-md shrink-0 overflow-hidden">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center text-amber-500 font-black text-2xl shadow-md shrink-0 overflow-hidden group-hover/feat:scale-105 transition-transform">
               {featuredApp.screenshots && featuredApp.screenshots.length > 0 ? (
                 <SafeImage
                   src={featuredApp.screenshots[0]}
@@ -172,7 +175,7 @@ export const CategoryShowcase: React.FC = () => {
             </div>
 
             <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate group-hover/feat:text-amber-500 transition-colors">
                 {featuredTitle}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1.5 mt-0.5">
@@ -286,14 +289,16 @@ export const CategoryShowcase: React.FC = () => {
             return (
               <div
                 key={app.id}
-                onClick={() => handleSelectFeatured(app)}
-                className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group ${
+                className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 group ${
                   isFeaturedSelected
                     ? 'bg-amber-500/10 border-amber-500/50 shadow-md ring-1 ring-amber-500/30'
                     : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800/80 hover:border-amber-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <div className="flex items-center gap-3.5 min-w-0">
+                <div 
+                  onClick={() => navigateToView('app_detail', app)}
+                  className="flex items-center gap-3.5 min-w-0 cursor-pointer"
+                >
                   {/* Large Squircle Icon */}
                   <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 font-black text-xl shadow-sm shrink-0 overflow-hidden">
                     {app.screenshots && app.screenshots.length > 0 ? (

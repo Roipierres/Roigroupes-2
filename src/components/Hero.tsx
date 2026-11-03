@@ -137,7 +137,7 @@ export const Hero: React.FC = () => {
           <div className="inline-flex items-center gap-3 p-2 pr-4 rtl:pl-4 rtl:pr-2 rounded-full bg-white dark:bg-slate-900/90 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold mb-6 shadow-md">
             <img
               src={logoPath}
-              alt="RoiGroupes Holding Emblem"
+              alt="RoiGroupes Emblem"
               className="w-8 h-8 rounded-full object-cover border border-amber-500/50 shadow-sm"
             />
             <span className="flex items-center gap-1.5">

@@ -76,10 +76,10 @@ export const AuthModal: React.FC = () => {
         {/* Brand Header */}
         <div className="text-center mb-6">
           <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-amber-500/20 font-black text-xl sm:text-2xl transform -rotate-3">
-            RG
+            RG<span className="text-red-500">S</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            RoiGroupes<span className="text-amber-500">.com</span>
+            RoiGroupe<span className="text-red-500">S</span><span className="text-amber-500">.com</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-bold">
             {mode === 'login' && (lang === 'fr' ? 'Connectez-vous à votre compte' : 'سجل الدخول إلى حسابك الخاص')}

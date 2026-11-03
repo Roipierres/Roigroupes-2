@@ -3,10 +3,10 @@ import { Language } from '../types';
 export const translations = {
   ar: {
     // Top bar & Branding
-    siteName: 'RoiGroupes.com',
-    siteShortName: 'RG',
-    siteTagline: 'منصة تطبيقات مجموعة RoiGroupes',
-    searchPlaceholder: 'ابحث في تطبيقات RoiGroupes التجارية والعائلية والأمنية...',
+    siteName: 'RoiGroupeS.com',
+    siteShortName: 'RGS',
+    siteTagline: 'منصة تطبيقات مجموعة RoiGroupeS',
+    searchPlaceholder: 'ابحث في تطبيقات RoiGroupeS التجارية والعائلية والأمنية...',
     langToggleBtn: 'Français',
     langToggleTooltip: 'التبديل إلى اللغة الفرنسية',
     navHome: 'الرئيسية',
@@ -19,8 +19,8 @@ export const translations = {
     welcomeUser: 'أهلاً بك',
     
     // Categories
-    categoriesTitle: 'فئات تطبيقات RoiGroupes',
-    categoriesSubtitle: 'تطبيقات نُخبوية معتمدة من مجموعة RoiGroupes لتلبية احتياجاتك اليومية والمهنية',
+    categoriesTitle: 'فئات تطبيقات RoiGroupeS',
+    categoriesSubtitle: 'تطبيقات نُخبوية معتمدة من مجموعة RoiGroupeS لتلبية احتياجاتك اليومية والمهنية',
     commercialTitle: 'الفئة التجارية',
     commercialDesc: 'حلول الأعمال، المحاسبة، إدارة المبيعات، ومراقبة المتاجر',
     familyTitle: 'العائلية',
@@ -28,14 +28,14 @@ export const translations = {
     securityTitle: 'الأمنية',
     securityDesc: 'حماية الخصوصية، قفل التطبيقات، الجدار الناري وإنذار الحماية',
     showcaseLabel: 'معرض التطبيقات المتجدد',
-    autoRotatingBadge: 'عرض تلقائي متجدد - RG',
+    autoRotatingBadge: 'عرض تلقائي متجدد - RGS',
     nextApp: 'التالي',
     prevApp: 'السابق',
     viewDetails: 'عرض التفاصيل والتحميل',
     allCategoryApps: 'عرض كل تطبيقات الفئة',
-
+    
     // Hero section
-    heroBadge: 'المنصة الرسمية المعتمدة لشركة RoiGroupes',
+    heroBadge: 'المنصة الرسمية المعتمدة لشركة RoiGroupeS',
     heroTitle: 'رسمية ومحمية',
     heroSubtitle: 'تطبيقات مشفرة لأمان بيناتكم',
     statApps: 'تطبيق موثوق',
@@ -61,15 +61,16 @@ export const translations = {
     commentPlaceholder: 'اكتب انطباعك عن التطبيق بكل شفافية...',
     submitComment: 'نشر التعليق',
     verifiedUser: 'مستخدم موثق',
-    developerResponse: 'رد مطوري RG الرسميين',
+    developerResponse: 'رد مطوري RGS الرسميين',
     helpfulBtn: 'مفيد',
+    shareApp: 'مشاركة التطبيق',
 
     // Modals
-    authModalTitle: 'تسجيل الدخول لـ RoiGroupes.com',
-    authModalDesc: 'اختر حسابك للتفاعل مع تطبيقات RG ونشر التقييمات بكل سهولة',
+    authModalTitle: 'تسجيل الدخول لـ RoiGroupeS.com',
+    authModalDesc: 'اختر حسابك للتفاعل مع تطبيقات RGS ونشر التقييمات بكل سهولة',
     loginGoogle: 'الدخول بواسطة حساب Google',
     loginFacebook: 'الدخول بواسطة حساب Facebook',
-    downloadingTitle: 'جاري جلب ملف التحميل المباشر من سيرفرات RG...',
+    downloadingTitle: 'جاري جلب ملف التحميل المباشر من سيرفرات RGS...',
     downloadCompleteTitle: 'اكتمل التحميل بنجاح!',
     installationSteps: 'خطوات التثبيت السريعة:',
     step1: 'افتح ملف APK المحمل على جهازك.',
@@ -78,14 +79,14 @@ export const translations = {
     closeBtn: 'إغلاق',
 
     // AI Advisor
-    aiAdvisorTitle: 'مساعد RoiGroupes الذكي لاختيار التطبيق',
-    aiAdvisorDesc: 'اشرح ما تبحث عنه باللغة العربية وسيحدد لك ذكاء RG التطبيق الأنسب من الفئات الثلاث',
+    aiAdvisorTitle: 'مساعد RoiGroupeS الذكي لاختيار التطبيق',
+    aiAdvisorDesc: 'اشرح ما تبحث عنه باللغة العربية وسيحدد لك ذكاء RGS التطبيق الأنسب من الفئات الثلاث',
     aiInputPlaceholder: 'مثال: أبحث عن تطبيق لمتابعة مصاريف المحل التجاري وحساب الأرباح...',
     askAiBtn: 'تحليل وتوصية بالذكاء الاصطناعي',
-    aiThinking: 'جاري معالجة الطلب عبر نموذج RoiGroupes AI...',
+    aiThinking: 'جاري معالجة الطلب عبر نموذج RoiGroupeS AI...',
 
     // Admin Dashboard
-    adminTitle: 'لوحة إدارة RoiGroupes.com الكاملة (RG Manager)',
+    adminTitle: 'لوحة إدارة RoiGroupeS.com الكاملة (RGS Manager)',
     adminTabOverview: 'الإحصائيات والتحليلات',
     adminTabApps: 'إدارة التطبيقات',
     adminTabMembers: 'قوائم الأعضاء',
@@ -95,7 +96,7 @@ export const translations = {
 
     // Admin Overview
     metricTotalDownloads: 'إجمالي التحميلات',
-    metricActiveApps: 'تطبيقات RG النشطة',
+    metricActiveApps: 'تطبيقات RGS النشطة',
     metricTotalMembers: 'إجمالي الأعضاء',
     metricAdRevenue: 'نقرات الإعلانات',
     downloadsChartTitle: 'مخطط زيادة التحميلات حسب الفئة',
@@ -143,18 +144,20 @@ export const translations = {
     adSenseTitle: 'كود إعلانات Google AdSense المباشر',
     adSensePlaceholder: 'ألصق كود AdSense Script هنا...',
     saveAdSense: 'حفظ كود الإعلانات',
+    socialSettingsTitle: 'إعدادات مواقع التواصل الاجتماعي',
+    socialSettingsDesc: 'أدخل روابط حسابات RoiGroupes على منصات التواصل الاجتماعي لتظهر للزوار.',
 
     // Footer
-    footerDesc: 'المنصة الرائدة الرسمية التابعة لمجموعة RoiGroupes Holding لعرض وتحميل أفضل التطبيقات التجارية والعائلية والأمنية.',
+    footerDesc: 'المنصة الرائدة الرسمية التابعة لمجموعة RoiGroupeS لبرمجة و عرض تطبيقات تجارية وعائلية وأمنية.',
     quickLinks: 'روابط سريعة',
-    copyright: 'جميع الحقوق محفوظة © 2026 RoiGroupes.com (RG Holding)',
+    copyright: 'جميع الحقوق محفوظة © 2026 RoiGroupeS.com (RGS)',
   },
   fr: {
     // Top bar & Branding
-    siteName: 'RoiGroupes.com',
-    siteShortName: 'RG',
-    siteTagline: 'Plateforme Officielle RoiGroupes',
-    searchPlaceholder: 'Rechercher une application RoiGroupes commerciale, familiale ou sécurité...',
+    siteName: 'RoiGroupeS.com',
+    siteShortName: 'RGS',
+    siteTagline: 'Plateforme Officielle RoiGroupeS',
+    searchPlaceholder: 'Rechercher une application RoiGroupeS commerciale, familiale ou sécurité...',
     langToggleBtn: 'العربية',
     langToggleTooltip: 'Passer à la langue arabe',
     navHome: 'Accueil',
@@ -167,8 +170,8 @@ export const translations = {
     welcomeUser: 'Bienvenue',
 
     // Categories
-    categoriesTitle: 'Catégories RoiGroupes',
-    categoriesSubtitle: 'Des applications d\'élite certifiées par RoiGroupes Holding pour vos besoins',
+    categoriesTitle: 'Catégories RoiGroupeS',
+    categoriesSubtitle: 'Des applications d\'élite certifiées par RoiGroupeS pour vos besoins',
     commercialTitle: 'Catégorie Commerciale',
     commercialDesc: 'Solutions professionnelles, comptabilité, gestion des ventes et magasins',
     familyTitle: 'Catégorie Familiale',
@@ -176,15 +179,15 @@ export const translations = {
     securityTitle: 'Catégorie Sécurité',
     securityDesc: 'Protection de la vie privée, verrouillage d\'apps, pare-feu et alarme',
     showcaseLabel: 'Galerie dynamique renouvelée',
-    autoRotatingBadge: 'Rotation automatique - RG',
+    autoRotatingBadge: 'Rotation automatique - RGS',
     nextApp: 'Suivant',
     prevApp: 'Précédent',
     viewDetails: 'Voir détails & Télécharger',
     allCategoryApps: 'Voir toute la catégorie',
 
     // Hero section
-    heroBadge: 'Plateforme Certifiée RoiGroupes Holding',
-    heroTitle: 'Les Applications Officielles RoiGroupes',
+    heroBadge: 'Plateforme Certifiée RoiGroupeS',
+    heroTitle: 'Les Applications Officielles RoiGroupeS',
     heroSubtitle: 'Applications cryptées pour la sécurité de vos données',
     statApps: 'Apps Vérifiées',
     statDownloads: 'Téléchargements',
@@ -209,15 +212,16 @@ export const translations = {
     commentPlaceholder: 'Partagez votre avis en toute transparence...',
     submitComment: 'Publier le commentaire',
     verifiedUser: 'Utilisateur Vérifié',
-    developerResponse: 'Réponse des développeurs RG',
+    developerResponse: 'Réponse des développeurs RGS',
     helpfulBtn: 'Utile',
+    shareApp: 'Partager l\'App',
 
     // Modals
-    authModalTitle: 'Connexion à RoiGroupes.com',
+    authModalTitle: 'Connexion à RoiGroupeS.com',
     authModalDesc: 'Choisissez votre compte pour vous connecter et laisser des avis',
     loginGoogle: 'Continuer avec Google',
     loginFacebook: 'Continuer avec Facebook',
-    downloadingTitle: 'Téléchargement depuis les serveurs RG...',
+    downloadingTitle: 'Téléchargement depuis les serveurs RGS...',
     downloadCompleteTitle: 'Téléchargement Terminé !',
     installationSteps: 'Étapes d\'installation rapide :',
     step1: 'Ouvrez le fichier APK téléchargé sur votre appareil.',
@@ -226,14 +230,14 @@ export const translations = {
     closeBtn: 'Fermer',
 
     // AI Advisor
-    aiAdvisorTitle: 'Assistant IA RoiGroupes',
-    aiAdvisorDesc: 'Décrivez ce dont vous avez besoin et l\'IA RG sélectionnera la meilleure app',
+    aiAdvisorTitle: 'Assistant IA RoiGroupeS',
+    aiAdvisorDesc: 'Décrivez ce dont vous avez besoin et l\'IA RGS sélectionnera la meilleure app',
     aiInputPlaceholder: 'Ex: Je cherche une application pour gérer mon magasin et mes revenus...',
     askAiBtn: 'Analyser avec IA',
-    aiThinking: 'Traitement par le modèle IA RoiGroupes...',
+    aiThinking: 'Traitement par le modèle IA RoiGroupeS...',
 
     // Admin Dashboard
-    adminTitle: 'Espace de Gestion RoiGroupes.com (RG Manager)',
+    adminTitle: 'Espace de Gestion RoiGroupeS.com (RGS Manager)',
     adminTabOverview: 'Statistiques & Analytiques',
     adminTabApps: 'Gestion des Apps',
     adminTabMembers: 'Liste des Membres',
@@ -243,7 +247,7 @@ export const translations = {
 
     // Admin Overview
     metricTotalDownloads: 'Total Téléchargements',
-    metricActiveApps: 'Apps RG Actives',
+    metricActiveApps: 'Apps RGS Actives',
     metricTotalMembers: 'Total Membres',
     metricAdRevenue: 'Clics Publicitaires',
     downloadsChartTitle: 'Téléchargements par Catégorie',
@@ -291,10 +295,12 @@ export const translations = {
     adSenseTitle: 'Code Script Google AdSense Direct',
     adSensePlaceholder: 'Collez le script Google AdSense ici...',
     saveAdSense: 'Sauvegarder le Script',
+    socialSettingsTitle: 'Réseaux Sociaux',
+    socialSettingsDesc: 'Configurez les liens de vos réseaux sociaux.',
 
     // Footer
-    footerDesc: 'La plateforme officielle de RoiGroupes Holding pour découvrir et télécharger des apps commerciales, familiales et de sécurité.',
+    footerDesc: 'La plateforme officielle de RoiGroupeS pour la programmation et l\'affichage d\'applications commerciales, familiales et de sécurité.',
     quickLinks: 'Liens Rapides',
-    copyright: 'Tous droits réservés © 2026 RoiGroupes.com (RG Holding)',
+    copyright: 'Tous droits réservés © 2026 RoiGroupeS.com (RGS)',
   }
 };

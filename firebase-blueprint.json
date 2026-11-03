@@ -77,6 +77,53 @@
         "status": { "type": "string", "enum": ["pending", "contacted", "in_development", "completed"] }
       },
       "required": ["projectType", "userIdea", "aiSummary", "userName", "status"]
+    },
+    "notifications": {
+      "title": "News Notifications",
+      "description": "Persistent site-wide news and updates for members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "titleFr": { "type": "string" },
+        "messageAr": { "type": "string" },
+        "messageFr": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "update", "news", "alert"] },
+        "createdAt": { "type": "string" },
+        "targetAppId": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["titleAr", "messageAr", "type", "createdAt", "isActive"]
+    },
+    "reviews": {
+      "title": "App Reviews",
+      "description": "User ratings and comments for applications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "appId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "comment": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["appId", "userId", "userName", "rating", "createdAt"]
+    },
+    "chats": {
+      "title": "Member Chat Messages",
+      "description": "Real-time messages between members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string", "maxLength": 2000 },
+        "timestamp": { "type": "string" },
+        "isRead": { "type": "boolean" }
+      },
+      "required": ["senderId", "receiverId", "text", "timestamp", "isRead"]
     }
   },
   "firestore": {
@@ -99,6 +146,18 @@
     "projectRequests/{requestId}": {
       "schema": "projectRequests",
       "description": "Development project requests and messages to admin"
+    },
+    "notifications/{notifId}": {
+      "schema": "notifications",
+      "description": "News and update notifications"
+    },
+    "reviews/{reviewId}": {
+      "schema": "reviews",
+      "description": "Individual app ratings and reviews"
+    },
+    "chats/{chatId}": {
+      "schema": "chats",
+      "description": "Peer-to-peer chat messages"
     }
   }
 }

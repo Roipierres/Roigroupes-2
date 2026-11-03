@@ -520,8 +520,8 @@ export const initialCategories: CategoryItem[] = [
 ];
 
 export const initialSiteSettings: SiteSettings = {
-  siteTitleAr: 'متجر تطبيقات RoiGroupes',
-  siteTitleFr: 'Boutique RoiGroupes',
+  siteTitleAr: 'متجر تطبيقات RoiGroupeS',
+  siteTitleFr: 'Boutique RoiGroupeS',
   defaultLang: 'ar',
   enableGoogleLogin: true,
   enableFacebookLogin: true,
@@ -529,9 +529,24 @@ export const initialSiteSettings: SiteSettings = {
   maintenanceMode: false,
   contactEmail: 'contact@roigroupes.com',
   whatsappNumber: '+213797152590',
+  facebookLink: 'https://facebook.com/roigroupes',
+  instagramLink: 'https://instagram.com/roigroupes',
+  tiktokLink: 'https://tiktok.com/@roigroupes',
   featuredAppId: 'app-comm-1',
   adminUsername: 'admin',
-  adminPassword: '123456'
+  adminPassword: '123456',
+  pwaTitle: 'متجر تطبيقات RoiGroupeS الرسمي',
+  pwaShortName: 'RoiGroupeS',
+  pwaStartUrl: '/',
+  pwaIcon: '/assets/aistudio/1793173133604_a080e212.jpg',
+  appFeatures: {
+    enableMemberChat: true,
+    enableNotifications: true,
+    enableAppReviews: true,
+    enableAIStoreAssistant: true,
+    enableLiveSupport: true,
+    enableUserProfiles: true
+  }
 };
 
 import { ProjectRequestItem } from '../types';

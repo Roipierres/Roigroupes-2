@@ -190,22 +190,22 @@ const SingleAppCard: React.FC<{ app: AppItem }> = ({ app }) => {
 
   return (
     <div className="bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 hover:shadow-xl group">
-      <div>
+      <div 
+        onClick={() => navigateToView('app_detail', app)}
+        className="cursor-pointer"
+      >
         {/* Top bar with icon and category badge */}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-400 to-amber-500 dark:from-slate-950 dark:to-slate-900 border border-amber-500/30 flex items-center justify-center text-slate-950 dark:text-amber-400 font-extrabold text-xl shadow-md shrink-0 group-hover:scale-105 transition-transform overflow-hidden">
-              {app.screenshots && app.screenshots.length > 0 ? (
-                <SafeImage
-                  src={app.screenshots[0]}
-                  alt={title}
-                  fallbackTitle={title}
-                  fallbackType="icon"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                title.charAt(0)
-              )}
+              <SafeImage
+                src={app.screenshots?.[0] || (app.icon?.startsWith('http') ? app.icon : undefined)}
+                iconName={!app.screenshots?.[0] && !app.icon?.startsWith('http') ? app.icon : undefined}
+                alt={title}
+                fallbackTitle={title}
+                fallbackType="icon"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-snug line-clamp-1 group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">

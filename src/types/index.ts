@@ -133,12 +133,39 @@ export interface SiteSettings {
   maintenanceMode: boolean;
   contactEmail: string;
   whatsappNumber: string; // Added field
+  facebookLink?: string;
+  instagramLink?: string;
+  tiktokLink?: string;
   featuredAppId?: string; // Admin selected app for top Hero showcase
   adminUsername?: string;
   adminPassword?: string;
   adminDisplayName?: string;
   adminAvatar?: string;
   adminPhone?: string;
+  // Platform App / PWA configuration
+  pwaTitle?: string;
+  pwaShortName?: string;
+  pwaStartUrl?: string;
+  pwaIcon?: string;
+  // Feature Toggles for the App/Platform
+  appFeatures?: {
+    enableMemberChat?: boolean;
+    enableNotifications?: boolean;
+    enableAppReviews?: boolean;
+    enableAIStoreAssistant?: boolean;
+    enableLiveSupport?: boolean;
+    enableUserProfiles?: boolean;
+  };
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  receiverId: string;
+  text: string;
+  timestamp: string;
+  isRead: boolean;
 }
 
 export interface ProjectRequestItem {
@@ -157,3 +184,23 @@ export interface ProjectRequestItem {
   createdAt: string;
   status: 'pending' | 'contacted' | 'in_development' | 'completed';
 }
+
+export interface NotificationItem {
+  id: string;
+  titleAr: string;
+  titleFr: string;
+  messageAr: string;
+  messageFr: string;
+  type: 'info' | 'update' | 'news' | 'alert';
+  createdAt: string;
+  targetAppId?: string; // Optional link to an app
+  isActive: boolean;
+}
+
+export interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  duration?: number;
+}
+

@@ -27,31 +27,44 @@ export const DownloadModal: React.FC = () => {
 
       const fileName = activeDownloadApp.uploadedFileName || `${activeDownloadApp.slug}.apk`;
 
-      // Animate progress bar to 100%
-      let currentPercent = 0;
-      await new Promise<void>((resolve) => {
-        const timer = setInterval(() => {
-          currentPercent += Math.floor(Math.random() * 20) + 12;
-          if (currentPercent >= 100) {
-            currentPercent = 100;
-            clearInterval(timer);
-            resolve();
-          }
-          setProgress(currentPercent);
-        }, 120);
-      });
+      try {
+        // Step 1: Verify file exists on server before starting animation
+        // This prevents the "HTML file" bug when server resets and files are missing
+        const checkRes = await fetch(downloadUrl, { method: 'HEAD', cache: 'no-store' });
+        if (!checkRes.ok) {
+          throw new Error('File not found on server');
+        }
 
-      setIsComplete(true);
+        // Step 2: Animate progress bar to 100%
+        let currentPercent = 0;
+        await new Promise<void>((resolve) => {
+          const timer = setInterval(() => {
+            currentPercent += Math.floor(Math.random() * 20) + 12;
+            if (currentPercent >= 100) {
+              currentPercent = 100;
+              clearInterval(timer);
+              resolve();
+            }
+            setProgress(currentPercent);
+          }, 120);
+        });
 
-      // Trigger native direct file download (preserves exact 30MB+ size from server or URL)
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = fileName;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+        setIsComplete(true);
+
+        // Step 3: Trigger direct native file download
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (err) {
+        console.error('Download verification error:', err);
+        alert(lang === 'fr' 
+          ? 'Désolé, le fichier est temporairement indisponible sur le serveur (possible redémarrage). Veuillez le téléverser à nouveau dans le panneau d\'administration.' 
+          : 'عذراً، الملف غير متوفر حالياً على الخادم (ربما بسبب إعادة تشغيل النظام). يرجى إعادة رفعه من لوحة الإدارة.');
+        setIsDownloadModalOpen(false);
+      }
     };
 
     startDownload();

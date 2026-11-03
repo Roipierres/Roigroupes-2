@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { Briefcase, Users, Shield, Smartphone, Zap, HeartHandshake, Calculator, TrendingUp, BellRing, Lock, ShieldCheck, Globe, Star, AppWindow } from 'lucide-react';
+
+const ICON_MAP: Record<string, any> = {
+  Briefcase, Users, Shield, Smartphone, Zap, HeartHandshake, Calculator, TrendingUp, BellRing, Lock, ShieldCheck, Globe, Star, AppWindow
+};
 
 interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackTitle?: string;
   fallbackType?: 'icon' | 'screenshot';
+  iconName?: string;
 }
 
 export const SafeImage: React.FC<SafeImageProps> = ({
@@ -11,6 +17,7 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   className,
   fallbackTitle = 'RoiGroupes',
   fallbackType = 'screenshot',
+  iconName,
   ...props
 }) => {
   const [hasError, setHasError] = useState(false);
@@ -18,6 +25,16 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   useEffect(() => {
     setHasError(false);
   }, [src]);
+
+  const LucideIcon = iconName ? ICON_MAP[iconName] : null;
+
+  if ((hasError || !src) && LucideIcon) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 p-2 shadow-inner`}>
+        <LucideIcon className="w-1/2 h-1/2" />
+      </div>
+    );
+  }
 
   const generateSvgFallback = () => {
     const cleanTitle = (fallbackTitle || 'RoiGroupes App').replace(/["'<>&]/g, '');
@@ -47,3 +64,4 @@ export const SafeImage: React.FC<SafeImageProps> = ({
     />
   );
 };
+

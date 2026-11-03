@@ -13,13 +13,15 @@ import { AuthModal } from './components/AuthModal';
 import { DownloadModal } from './components/DownloadModal';
 import { AllAppsModal } from './components/AllAppsModal';
 import { PinnedAppsBanner } from './components/PinnedAppsBanner';
+import { ProfilePage } from './components/ProfilePage';
 import { FloatingAdsModal } from './components/FloatingAdsModal';
 import { Footer } from './components/Footer';
 import { FloatingActions } from './components/FloatingActions';
+import { ToastContainer } from './components/ToastContainer';
 import { ArrowLeft, Grid } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { currentView, lang, setIsAllAppsModalOpen, isLoading } = useApp();
+  const { currentView, lang, setIsAllAppsModalOpen, isLoading, siteSettings } = useApp();
 
   React.useEffect(() => {
     // Ensure viewport meta tag is standard and not zoomed or restricted
@@ -34,8 +36,7 @@ const MainLayout: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden select-none">
-        {/* Background Radial Glow */}
-        <div className="absolute w-96 h-96 bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-emerald-500/10 blur-3xl rounded-full pointer-events-none animate-pulse-glow" />
+        {/* Background Radial Glow removed as per user request */}
 
         {/* Logo Container with Orbiting Colorful Particles */}
         <div className="relative flex items-center justify-center">
@@ -45,55 +46,24 @@ const MainLayout: React.FC = () => {
           {/* Outer Ring 1: Clockwise Spinning Gradient Arc */}
           <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full border-2 border-transparent border-t-amber-500 border-r-emerald-400 border-b-cyan-400 border-l-purple-500 animate-spin-slow p-1 shadow-lg shadow-amber-500/10" />
 
-          {/* Orbiting Particle Ring 1 (Clockwise Orbit) */}
-          <div className="absolute w-40 h-40 sm:w-48 sm:h-48 rounded-full animate-spin-slow pointer-events-none">
-            {/* Top Dot - Gold */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-amber-400 rounded-full shadow-[0_0_12px_#f59e0b] animate-ping" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-amber-400 rounded-full shadow-[0_0_12px_#f59e0b]" />
-
-            {/* Right Dot - Emerald Green */}
-            <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-emerald-400 rounded-full shadow-[0_0_12px_#10b981]" />
-
-            {/* Bottom Dot - Purple/Indigo */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 bg-purple-400 rounded-full shadow-[0_0_12px_#a855f7]" />
-
-            {/* Left Dot - Cyan/Blue */}
-            <div className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-cyan-400 rounded-full shadow-[0_0_12px_#06b6d4]" />
-          </div>
-
-          {/* Orbiting Particle Ring 2 (Counter-Clockwise Orbit with Diagonal Dots) */}
-          <div className="absolute w-32 h-32 sm:w-40 sm:h-40 rounded-full animate-spin-reverse-fast pointer-events-none">
-            {/* Top-Right Dot - Pink */}
-            <div className="absolute top-1.5 right-1.5 w-3 h-3 bg-pink-500 rounded-full shadow-[0_0_10px_#ec4899]" />
-
-            {/* Bottom-Right Dot - Yellow */}
-            <div className="absolute bottom-1.5 right-1.5 w-3 h-3 bg-yellow-300 rounded-full shadow-[0_0_10px_#fde047]" />
-
-            {/* Bottom-Left Dot - Teal */}
-            <div className="absolute bottom-1.5 left-1.5 w-3 h-3 bg-teal-400 rounded-full shadow-[0_0_10px_#2dd4bf]" />
-
-            {/* Top-Left Dot - Red/Orange */}
-            <div className="absolute top-1.5 left-1.5 w-3 h-3 bg-rose-400 rounded-full shadow-[0_0_10px_#fb7185]" />
-          </div>
+          {/* Particles removed as per user request */}
 
           {/* Central Logo Emblem Showcase */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-900 border-2 border-amber-500/60 p-1.5 shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all overflow-hidden group">
               <img
                 src={logoPath}
-                alt="RoiGroupes Holding Logo"
-                className="w-full h-full object-cover rounded-2xl animate-pulse"
+                alt="RGS"
+                className="w-full h-full object-cover animate-pulse"
               />
             </div>
           </div>
         </div>
 
-        {/* Loading Text & Branding */}
-        <div className="mt-8 text-center relative" dir="ltr" style={{ direction: 'ltr' }}>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wider flex items-center justify-center">
-            <span>RoiGroupe</span>
-            <span className="text-red-500 font-black animate-pulse-glow-s inline-block ml-0.5">S</span>
-          </h2>
+        <div className="mt-8">
+          <span className="text-3xl font-black text-white tracking-widest flex items-center" dir="ltr">
+            RG<span className="text-red-500">S</span>
+          </span>
         </div>
       </div>
     );
@@ -111,10 +81,10 @@ const MainLayout: React.FC = () => {
             <PinnedAppsBanner />
             <CategoryShowcase />
 
-            {/* Smart Software Development AI Assistant (المساعد الذكي لبرمجة التطبيقات والمواقع - في الأعلى) */}
-            <AIAppAssistant />
+            {/* Smart Software Development AI Assistant */}
+            {siteSettings.appFeatures?.enableAIStoreAssistant !== false && <AIAppAssistant />}
 
-            {/* Professional Button to Show All Apps (دليل التطبيقات - في الأسفل) */}
+            {/* Professional Button to Show All Apps */}
             <div className="py-8 sm:py-12 px-4 flex flex-col items-center justify-center text-center bg-white dark:bg-slate-900 border-t border-b border-slate-100 dark:border-slate-800 my-4 sm:my-6">
               <div className="mb-4 sm:mb-6 max-w-lg">
                 <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mb-2">
@@ -140,7 +110,7 @@ const MainLayout: React.FC = () => {
           </div>
         )}
 
-        {/* Standalone Category Page (الصفحة المستقلة للفئة المختارة) */}
+        {/* Standalone Category Page */}
         {currentView === 'category_view' && (
           <>
             <CategoryViewPage />
@@ -168,6 +138,11 @@ const MainLayout: React.FC = () => {
         {currentView === 'admin' && (
           <AdminDashboard />
         )}
+
+        {/* Standalone Profile Settings Page */}
+        {currentView === 'profile_settings' && (
+          <ProfilePage />
+        )}
       </main>
 
       <Footer />
@@ -177,13 +152,17 @@ const MainLayout: React.FC = () => {
       <DownloadModal />
       <AllAppsModal />
       <FloatingAdsModal />
-      <AIAppAssistantModal />
+      {siteSettings.appFeatures?.enableAIStoreAssistant !== false && <AIAppAssistantModal />}
       
-      {/* Floating Action Buttons (WhatsApp & AI Assistant) */}
+      {/* Floating Action Buttons */}
       <FloatingActions />
+      
+      {/* Toast Notifications */}
+      <ToastContainer />
     </div>
   );
 };
+
 
 export default function App() {
   return (

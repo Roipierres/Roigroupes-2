@@ -35,23 +35,41 @@ const upload = multer({
 });
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Serve static uploads with binary APK attachment headers & range support
 app.use('/uploads', express.static(uploadsDir, {
+  fallthrough: false, // Ensure it doesn't fall through to other middlewares if file not found
   setHeaders: (res, filePath) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Accept-Ranges', 'bytes');
-    if (filePath.endsWith('.apk')) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+    
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.apk') {
       res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-      res.setHeader('Content-Disposition', 'attachment');
+      const baseName = path.basename(filePath);
+      res.setHeader('Content-Disposition', `attachment; filename="${baseName}"`);
+    } else if (ext === '.png') {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (ext === '.webp') {
+      res.setHeader('Content-Type', 'image/webp');
     }
   }
 }));
 
+// Error handler for /uploads to prevent falling through to SPA HTML catch-all
+app.use('/uploads', (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Uploads Access Error:', err);
+  res.status(404).json({ error: 'File not found on server' });
+});
+
 // File upload endpoint with robust multer error handling
 app.post('/api/upload', (req, res) => {
+  console.log('Upload request received...');
   upload.single('file')(req, res, (err) => {
     if (err) {
       console.error('Multer Upload Error:', err);
@@ -60,110 +78,109 @@ app.post('/api/upload', (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded.' });
     }
+    console.log(`File uploaded successfully: ${req.file.filename} (${req.file.size} bytes)`);
     const fileUrl = `/uploads/${req.file.filename}`;
     res.json({ url: fileUrl, filename: req.file.originalname, size: req.file.size });
   });
 });
 
-const PORT = process.env.PORT || 3000;
+// Dynamic PWA Manifest Generator
+app.get('/api/manifest', (req, res) => {
+  const { name, short_name, start_url, icon } = req.query;
+  const manifest = {
+    name: name || 'RoiGroupes.com Official Store',
+    short_name: short_name || 'RGS',
+    start_url: start_url || '/',
+    display: 'standalone',
+    background_color: '#020617',
+    theme_color: '#f59e0b',
+    icons: [
+      {
+        src: icon || '/assets/aistudio/1793173133604_a080e212.jpg',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any maskable'
+      }
+    ]
+  };
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.send(JSON.stringify(manifest));
+});
+
+const PORT = 3000;
 
 // Gemini API setup
 const apiKey = process.env.GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
-// AI Development Consultant for Apps & Websites
+// AI Development Consultant for Apps & Websites (Conversational Interrogator)
 app.post('/api/ai-dev-consultant', async (req, res) => {
   try {
-    const { userPrompt, projectType = 'mobile_app', lang = 'ar', userInfo } = req.body;
+    const { messages = [], lang = 'ar', userInfo } = req.body;
 
-    if (!userPrompt || typeof userPrompt !== 'string') {
-      return res.status(400).json({ error: 'User prompt is required.' });
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Messages history is required.' });
     }
-
-    // Fallback generator if API key is missing or fails
-    const generateFallbackConsultation = () => {
-      const typeTitles: Record<string, { ar: string; fr: string }> = {
-        mobile_app: { ar: 'مشروع تطبيق هاتف ذكي (Android / iOS)', fr: 'Projet Application Mobile (Android / iOS)' },
-        website: { ar: 'مشروع موقع ويب احترافي ومنصة إلكترونية', fr: 'Projet Site Web & Plateforme Cloud' },
-        ecommerce: { ar: 'مشروع متجر تجارة إلكترونية ودفع إلكتروني', fr: 'Projet Boutique E-Commerce' },
-        erp_pos: { ar: 'مشروع نظام سحابي لإدارة الأعمال والمبيعات', fr: 'Projet Système ERP & Gestion Commerciale' },
-        custom: { ar: 'مشروع برمجي مخصص', fr: 'Projet Logiciel Personnalisé' }
-      };
-
-      const title = typeTitles[projectType] ? typeTitles[projectType][lang === 'fr' ? 'fr' : 'ar'] : (lang === 'fr' ? 'Projet de Développement' : 'مشروع تطوير وبرمجة');
-
-      const isApp = projectType === 'mobile_app' || userPrompt.includes('تطبيق') || userPrompt.includes('app');
-      const isStore = projectType === 'ecommerce' || userPrompt.includes('متجر') || userPrompt.includes('منتجات') || userPrompt.includes('شراء');
-
-      let suggestedTech = isApp ? 'React Native / Flutter, Node.js, Firebase Cloud' : 'Next.js, Tailwind CSS, PostgreSQL / Firebase, Stripe / Edahabia';
-      let estimatedTimeline = isStore ? '3 إلى 4 أسابيع' : '2 إلى 4 أسابيع';
-
-      let aiSummary = lang === 'fr'
-        ? `Étude de faisabilité : Le projet "${userPrompt.slice(0, 50)}..." nécessite une architecture moderne avec interface utilisateur fluide, backend sécurisé et panneau d'administration pour la gestion complète.`
-        : `دراسة الجدوى الفنية: يتطلب المشروع نظاماً برمجياً حديثاً يتضمن واجهة مستخدم متجاوبة فائقة السرعة، قاعدة بيانات سحابية متزامنة، ولوحة تحكم إدارية مركزية للتحكم بالبيانات والمستخدمين. الفكرة قابلة للتنفيذ بكفاءة عالية وفق أعلى معايير RoiGroupes.`;
-
-      let adminMessage = lang === 'fr'
-        ? `Rapport de consultation IA pour l'administration :\nLe client (${userInfo?.name || 'Visiteur'}) souhaite développer un projet (${title}).\nDescription détaillée : "${userPrompt}".\nTechnologies recommandées : ${suggestedTech}.\nDélai estimé : ${estimatedTimeline}.`
-        : `تقرير المساعد الذكي لإدارة RoiGroupes Holding:\nيرغب العضو/العميل (${userInfo?.name || 'زائر الموقع'}) في التعاقد لتطوير (${title}).\n\n📌 ملخص الفكرة من العميل:\n"${userPrompt}"\n\n🛠️ التوصية التقنية المقترحة:\n- البنية: ${suggestedTech}\n- لوحة تحكم سحابية لإدارة البيانات والتقارير.\n- مدة الإنجاز المقدرة: ${estimatedTimeline}.\n\nالرجاء من فريق التطوير التواصل مع العميل للتنسيق وتحديد تفاصيل العقد والبدء بالتنفيذ.`;
-
-      return {
-        projectTitle: title,
-        projectType,
-        aiSummary,
-        suggestedTech,
-        estimatedTimeline,
-        adminMessage
-      };
-    };
 
     if (!apiKey) {
-      return res.json(generateFallbackConsultation());
+      // Very simple fallback for chat if no API key
+      const lastUserMsg = messages[messages.length - 1].content;
+      return res.json({
+        text: lang === 'fr' 
+          ? `C'est une excellente idée ! Pour vous aider au mieux, j'ai besoin de quelques détails. Quel est votre nom et votre numéro de téléphone pour que notre équipe technique puisse vous contacter ?` 
+          : `هذه فكرة ممتازة! لمساعدتك بشكل احترافي، أحتاج لبعض التفاصيل. ما هو اسمك الكريم ورقم هاتفك ليتواصل معك فريقنا التقني؟`
+      });
     }
 
-    const systemInstruction = `You are the Lead Software Architect and Development Consultant for RoiGroupes Holding (RoiGroupes.com).
-Your role:
-A client comes to you with an idea for a mobile application (Android/iOS), website, e-commerce store, ERP, or custom software.
-Analyze their idea and provide an executive development brief formatted in JSON with the following exact keys:
-- "projectTitle": A clear, attractive project title (in ${lang === 'fr' ? 'French' : 'Arabic'}).
-- "projectType": normalized type (${projectType}).
-- "aiSummary": Professional technical feasibility study & architecture outline explaining what will be built, user journey, and main modules (in ${lang === 'fr' ? 'French' : 'Arabic'}).
-- "suggestedTech": Recommended modern technology stack (e.g., React Native/Flutter, Next.js, Node.js, Firebase, Cloud SQL).
-- "estimatedTimeline": Realistic timeline (e.g., "3 à 5 semaines" or "3 إلى 5 أسابيع").
-- "adminMessage": A formal, well-structured message prepared on behalf of the AI Consultant addressed to RoiGroupes Administration, introducing the client (${userInfo?.name || 'العميل'}), detailing what they need, budget/tech recommendations, and urging the team to follow up.
+         const systemInstruction = `أنت "المهندس الأول ورئيس قسم الابتكار" في مجموعة RoiGroupeS.
+تتحدث برسمية تامة (Formal Arabic) وباحترافية عالية جداً.
+مهمتك هي "استنطاق" الزبون (Interrogating the client) بذكاء ولباقة لمعرفة تفاصيل مشروعه بدقة.
 
-Output strictly valid JSON with no markdown wrapping or code blocks.`;
+بروتوكول التعامل:
+1. لا تقدم اقتراحات عشوائية؛ اسأل العميل ليفصح عما يريد.
+2. أخبر العميل أن منصة RoiGroupeS ستتكفل بكل شيء: البرمجة من الصفر، الرفع على المتاجر، الإدارة، والصيانة.
+3. كن مقنعاً جداً بأن أفضل بداية للمشروع هي تطبيق موبايل خاص من إنشاء المنصة.
+4. الأسعار تبدأ من 1 مليون سنتيم (10,000 دج) لأبسط التطبيقات، وتزيد حسب التعقيد التقني.
+5. أنواع التطبيقات التي نبرمجها: تطبيقات توصيل، تطبيقات مؤسساتية، تطبيقات عائلية وأمنية، تطبيقات مبتكرة لكل الأفكار.
+6. يجب أن تحصل خلال الحوار على: (اسم العميل، رقم الهاتف، فكرة التطبيق الدقيقة).
+7. يمكنك عمل "فاتورة تقديرية" (Pro-forma Invoice) نصية إذا طلب العميل ذلك، موضحاً فيها السعر التقريبي (بدءاً من 10,000 دج).
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: [
-        { role: 'user', parts: [{ text: `Client idea: "${userPrompt}". Selected type: ${projectType}. Client Name: ${userInfo?.name || 'Member'}` }] }
-      ],
+عند اكتمال الاستنطاق والحصول على الاسم والهاتف، أدرج هذا القالب في نهاية رسالتك الختامية:
+[LEAD_DATA]
+{
+  "userName": "اسم العميل",
+  "userPhone": "رقم الهاتف",
+  "projectTitle": "عنوان المشروع المقترح",
+  "projectType": "mobile_app | website | ecommerce | erp_pos | custom",
+  "userIdea": "ملخص كامل للفكرة المستنطقة",
+  "suggestedTech": "التقنيات التي سنستخدمها",
+  "estimatedTimeline": "المدة المقدرة للتنفيذ"
+}
+[/LEAD_DATA]
+
+تذكر: كن مرناً ولكن رسمياً جداً. هدفك هو إقناع الزبون وبناء الثقة التامة في RoiGroupeS.`;
+
+    const history = messages.slice(0, -1).map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+    const currentMessage = messages[messages.length - 1].content;
+
+    const chat = ai.chats.create({
+      model: 'gemini-3.8-flash',
       config: {
         systemInstruction,
-        temperature: 0.6,
-        responseMimeType: 'application/json'
-      }
+      },
+      history
     });
 
-    const text = response.text || '';
-    try {
-      const parsed = JSON.parse(text);
-      return res.json(parsed);
-    } catch {
-      return res.json(generateFallbackConsultation());
-    }
+    const result = await chat.sendMessage(currentMessage);
+    const text = result.text;
+
+    return res.json({ text });
   } catch (error: any) {
-    console.error('AI Dev Consultant Error:', error);
-    // Return fallback gracefully
-    const fallback = {
-      projectTitle: 'مشروع تطبيق / موقع مخصص - RoiGroupes',
-      projectType: req.body?.projectType || 'mobile_app',
-      aiSummary: 'دراسة استشارية سريعة: فكرة المشروع مدروسة وقابلة للتنفيذ بتصميم عصري وتقنيات سحابية عالية الأمان.',
-      suggestedTech: 'React Native / Next.js, Node.js, Firebase',
-      estimatedTimeline: '2 إلى 4 أسابيع',
-      adminMessage: `طلب استشارة وتطوير مشروع من العضو:\n${req.body?.userPrompt || ''}`
-    };
-    return res.json(fallback);
+    console.error('AI Dev Consultant Chat Error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -179,29 +196,13 @@ if (process.env.NODE_ENV !== 'production') {
   app.use('*', async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      let template = await vite.transformIndexHtml(
-        url,
-        `<!doctype html>
-<html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RoiGroupes.com - RG App Store</title>
-    <meta name="description" content="المنصة الرسمية لمجموعة RoiGroupes Holding لعرض وتحميل التطبيقات التجارية والعائلية والأمنية." />
-    <meta property="og:title" content="RoiGroupes.com - RG App Store" />
-    <meta property="og:description" content="المنصة الرسمية لمجموعة RoiGroupes Holding لعرض وتحميل التطبيقات التجارية والعائلية والأمنية." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-slate-950 text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>`
-      );
+      // Read index.html from the root directory
+      const indexPath = path.resolve(__dirname, 'index.html');
+      let template = fs.readFileSync(indexPath, 'utf-8');
+      
+      // Transform index.html with Vite
+      template = await vite.transformIndexHtml(url, template);
+      
       res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);

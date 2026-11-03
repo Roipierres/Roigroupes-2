@@ -38,6 +38,7 @@ import {
   Layers,
   Smartphone,
   Zap,
+  Bell,
   RotateCcw,
   Bot,
   Clock,
@@ -47,7 +48,9 @@ import {
   FileText,
   Camera,
   Video,
-  Sparkles
+  Sparkles,
+  Share2,
+  ShieldCheck
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -93,11 +96,15 @@ export const AdminDashboard: React.FC = () => {
     floatingAds,
     updateFloatingAd,
     updateAllFloatingAds,
-    setIsFloatingAdsOpen
+    setIsFloatingAdsOpen,
+    notifications,
+    addNotification,
+    updateNotification,
+    deleteNotification
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'apps' | 'members' | 'ads' | 'comments' | 'settings' | 'categories' | 'project_requests'
+    'overview' | 'apps' | 'members' | 'ads' | 'comments' | 'settings' | 'categories' | 'project_requests' | 'notifications' | 'pwa_builder'
   >('overview');
 
   // App Modal / Form State for Add / Edit
@@ -113,7 +120,7 @@ export const AdminDashboard: React.FC = () => {
   const [formFullDescFr, setFormFullDescFr] = useState('');
   const [formSize, setFormSize] = useState('25 MB');
   const [formVersion, setFormVersion] = useState('1.0.0');
-  const [formDev, setFormDev] = useState('RoiGroupes Holding');
+  const [formDev, setFormDev] = useState('RoiGroupes');
   const [formBadgeAr, setFormBadgeAr] = useState('تطبيق جديد');
   const [formBadgeFr, setFormBadgeFr] = useState('Nouvelle App');
   const [formIsFeatured, setFormIsFeatured] = useState(false);
@@ -151,6 +158,11 @@ export const AdminDashboard: React.FC = () => {
 
   // WhatsApp Number State
   const [whatsappInput, setWhatsappInput] = useState(siteSettings.whatsappNumber || '+213797152590');
+
+  // Social Links State
+  const [facebookInput, setFacebookInput] = useState(siteSettings.facebookLink || '');
+  const [instagramInput, setInstagramInput] = useState(siteSettings.instagramLink || '');
+  const [tiktokInput, setTiktokInput] = useState(siteSettings.tiktokLink || '');
 
   // Category Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -201,13 +213,123 @@ export const AdminDashboard: React.FC = () => {
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Notifications Form State
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [editingNotif, setEditingNotif] = useState<any>(null);
+  const [notifTitleAr, setNotifTitleAr] = useState('');
+  const [notifTitleFr, setNotifTitleFr] = useState('');
+  const [notifMessageAr, setNotifMessageAr] = useState('');
+  const [notifMessageFr, setNotifMessageFr] = useState('');
+  const [notifType, setNotifType] = useState<'info' | 'update' | 'news' | 'alert'>('info');
+  const [notifTargetAppId, setNotifTargetAppId] = useState('');
+  
+  // PWA Builder / App Generator State
+  const [pwaFormTitle, setPwaFormTitle] = useState(siteSettings.pwaTitle || '');
+  const [pwaFormShortName, setPwaFormShortName] = useState(siteSettings.pwaShortName || '');
+  const [pwaFormStartUrl, setPwaFormStartUrl] = useState(siteSettings.pwaStartUrl || '/');
+  const [pwaFormIcon, setPwaFormIcon] = useState(siteSettings.pwaIcon || '');
+  const [isUploadingPwaIcon, setIsUploadingPwaIcon] = useState(false);
+  const [appFeatures, setAppFeatures] = useState(siteSettings.appFeatures || {
+    enableMemberChat: true,
+    enableNotifications: true,
+    enableAppReviews: true,
+    enableAIStoreAssistant: true,
+    enableLiveSupport: true,
+    enableUserProfiles: true
+  });
+
+  const openAddNotifModal = () => {
+    setEditingNotif(null);
+    setNotifTitleAr('');
+    setNotifTitleFr('');
+    setNotifMessageAr('');
+    setNotifMessageFr('');
+    setNotifType('info');
+    setNotifTargetAppId('');
+    setIsNotifModalOpen(true);
+  };
+
+  const openEditNotifModal = (notif: any) => {
+    setEditingNotif(notif);
+    setNotifTitleAr(notif.titleAr);
+    setNotifTitleFr(notif.titleFr);
+    setNotifMessageAr(notif.messageAr);
+    setNotifMessageFr(notif.messageFr);
+    setNotifType(notif.type);
+    setNotifTargetAppId(notif.targetAppId || '');
+    setIsNotifModalOpen(true);
+  };
+
+  const handleSaveNotif = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notifTitleAr || !notifMessageAr) return;
+
+    if (editingNotif) {
+      await updateNotification({
+        ...editingNotif,
+        titleAr: notifTitleAr,
+        titleFr: notifTitleFr,
+        messageAr: notifMessageAr,
+        messageFr: notifMessageFr,
+        type: notifType,
+        targetAppId: notifTargetAppId || undefined
+      });
+    } else {
+      await addNotification({
+        titleAr: notifTitleAr,
+        titleFr: notifTitleFr,
+        messageAr: notifMessageAr,
+        messageFr: notifMessageFr,
+        type: notifType,
+        targetAppId: notifTargetAppId || undefined
+      });
+    }
+    setIsNotifModalOpen(false);
+  };
+  
+  const handleSavePwaSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateSiteSettings({
+      pwaTitle: pwaFormTitle,
+      pwaShortName: pwaFormShortName,
+      pwaStartUrl: pwaFormStartUrl,
+      pwaIcon: pwaFormIcon,
+      appFeatures
+    });
+    setCredentialsSavedNotice(true);
+    setTimeout(() => setCredentialsSavedNotice(false), 3000);
+  };
+
+  const handlePwaIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingPwaIcon(true);
+      const optimizedBase64 = await processImageFile(file, 512, 0.9);
+      setPwaFormIcon(optimizedBase64);
+    } catch (err) {
+      console.error('PWA Icon upload error:', err);
+    } finally {
+      setIsUploadingPwaIcon(false);
+    }
+  };
+
   React.useEffect(() => {
     if (currentUser && activeTab === 'settings') {
       setAdminProfileName(currentUser.name);
       setAdminProfileAvatar(currentUser.avatar);
       setAdminProfileEmail(currentUser.email);
     }
-  }, [currentUser, activeTab]);
+    if (siteSettings) {
+      setPwaFormTitle(siteSettings.pwaTitle || '');
+      setPwaFormShortName(siteSettings.pwaShortName || '');
+      setPwaFormStartUrl(siteSettings.pwaStartUrl || '/');
+      setPwaFormIcon(siteSettings.pwaIcon || '');
+      if (siteSettings.appFeatures) {
+        setAppFeatures(siteSettings.appFeatures);
+      }
+    }
+  }, [currentUser, activeTab, siteSettings]);
 
   const handleAdminAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -263,7 +385,7 @@ export const AdminDashboard: React.FC = () => {
     setFormFullDescFr('');
     setFormSize('25 MB');
     setFormVersion('1.0.0');
-    setFormDev('RoiGroupes Holding');
+    setFormDev('RoiGroupes');
     setFormBadgeAr('تطبيق جديد');
     setFormBadgeFr('Nouvelle App');
     setFormIsFeatured(false);
@@ -469,9 +591,9 @@ export const AdminDashboard: React.FC = () => {
       slug: (formTitleAr || 'rg-app').toLowerCase().replace(/\s+/g, '-'),
       category: formCategory,
       shortDesc: formShortDescAr || 'تطبيق مميز من مجموعة RoiGroupes',
-      shortDescFr: formShortDescFr || 'Application certifiée RoiGroupes Holding',
+      shortDescFr: formShortDescFr || 'Application certifiée RoiGroupes',
       fullDesc: formFullDescAr || 'تطبيق رسمي معتمد من مجموعة RoiGroupes يوفر حلولاً متكاملة مع إمكانية التحميل المباشر.',
-      fullDescFr: formFullDescFr || 'Application officielle certifiée par RoiGroupes Holding offrant des fonctionnalités avancées.',
+      fullDescFr: formFullDescFr || 'Application officielle certifiée par RoiGroupes offrant des fonctionnalités avancées.',
       icon: 'Briefcase',
       badge: formBadgeAr || (formCategory === 'commercial' ? 'تجاري' : formCategory === 'family' ? 'عائلي' : 'أمني'),
       badgeFr: formBadgeFr || (formCategory === 'commercial' ? 'Commercial' : formCategory === 'family' ? 'Familial' : 'Sécurité'),
@@ -481,7 +603,7 @@ export const AdminDashboard: React.FC = () => {
       size: formSize || '25 MB',
       version: formVersion || '1.0.0',
       updatedDate: new Date().toISOString().split('T')[0],
-      developer: formDev || 'RoiGroupes Holding',
+      developer: formDev || 'RoiGroupes',
       screenshots: formScreenshots.length > 0 
         ? formScreenshots 
         : [`data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500"><rect width="800" height="500" fill="#0f172a"/><rect x="20" y="20" width="760" height="460" rx="24" fill="#1e293b" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.3"/><circle cx="400" cy="200" r="60" fill="#f59e0b" fill-opacity="0.2" stroke="#f59e0b" stroke-width="3"/><text x="400" y="210" font-family="sans-serif" font-size="40" font-weight="bold" fill="#f59e0b" text-anchor="middle">RG</text><text x="400" y="320" font-family="sans-serif" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">${(formTitleAr || 'RoiGroupes App').replace(/["'<>&]/g, '')}</text><text x="400" y="360" font-family="sans-serif" font-size="16" fill="#94a3b8" text-anchor="middle">RoiGroupes Certified Application</text></svg>`)}`],
@@ -649,20 +771,20 @@ export const AdminDashboard: React.FC = () => {
     currentUser.email === 'manager@roigroupes.com'
   ));
 
-  const [loginInputUser, setLoginInputUser] = useState('admin');
-  const [loginInputPass, setLoginInputPass] = useState('123456');
+  const [loginInputUser, setLoginInputUser] = useState('');
+  const [loginInputPass, setLoginInputPass] = useState('');
   const [loginErrorMsg, setLoginErrorMsg] = useState<string | null>(null);
 
   if (!isManager) {
     return (
       <div className="py-12 px-4 max-w-md mx-auto my-8 animate-fade-in">
         <div className="bg-white dark:bg-slate-900 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/20 font-black text-xl">
-            RG
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/20 font-black text-xl" dir="ltr">
+            RG<span className="text-red-500">S</span>
           </div>
           
-          <h2 className="text-xl font-black text-slate-900 dark:text-white mb-1">
-            RoiGroupes<span className="text-amber-500">.com</span>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white mb-1" dir="ltr">
+            RoiGroupe<span className="text-red-500">S</span><span className="text-amber-500">.com</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 font-bold">
             {lang === 'fr'
@@ -855,7 +977,31 @@ export const AdminDashboard: React.FC = () => {
           }`}
         >
           <Bot className="w-4 h-4" />
-          <span>{lang === 'fr' ? 'Projets & Messages IA' : 'طلبات البرمجة (المساعد الذكي)'} ({safeRequests.length})</span>
+          <span>{lang === 'fr' ? 'Interrogations IA & Prospects' : 'نتائج استنطاق العملاء (AI Leads)'} ({safeRequests.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('notifications')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap transition-colors cursor-pointer ${
+            activeTab === 'notifications'
+              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Bell className="w-4 h-4" />
+          <span>{lang === 'fr' ? 'News & Flashs' : 'إدارة الإشعارات والأخبار'}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('pwa_builder')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap transition-colors cursor-pointer ${
+            activeTab === 'pwa_builder'
+              ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Smartphone className="w-4 h-4" />
+          <span>{lang === 'fr' ? 'Générateur d\'App' : 'باني التطبيق الرسمي'}</span>
         </button>
       </div>
 
@@ -992,37 +1138,41 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Selector and Save Button */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-                <select
-                  value={siteSettings?.featuredAppId || (safeApps.find(a => a.isFeatured)?.id || safeApps[0]?.id || '')}
-                  onChange={(e) => {
-                    const chosenId = e.target.value;
-                    updateSiteSettings({ featuredAppId: chosenId });
-                  }}
-                  className="bg-slate-950 border-2 border-amber-500/50 text-amber-300 font-black text-xs rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/40 cursor-pointer shadow-md"
-                >
-                  {safeApps.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {lang === 'fr' ? a.titleFr : a.title} ({a.category})
-                    </option>
-                  ))}
-                </select>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0">
+                <div className="relative">
+                  <Grid className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500 pointer-events-none" />
+                  <select
+                    value={siteSettings?.featuredAppId || ''}
+                    onChange={(e) => {
+                      const chosenId = e.target.value;
+                      updateSiteSettings({ featuredAppId: chosenId });
+                    }}
+                    className="bg-slate-950 border-2 border-amber-500/50 text-amber-300 font-black text-sm rounded-2xl ltr:pl-10 ltr:pr-4 rtl:pr-10 rtl:pl-4 py-3.5 focus:outline-none focus:ring-4 focus:ring-amber-500/20 cursor-pointer shadow-xl appearance-none min-w-[240px]"
+                  >
+                    <option value="" disabled>{lang === 'fr' ? '-- Sélectionner --' : '-- اختر التطبيق --'}</option>
+                    {safeApps.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {lang === 'fr' ? a.titleFr : a.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <button
                   type="button"
                   onClick={async () => {
-                    const currentId = siteSettings?.featuredAppId || (safeApps.find(a => a.isFeatured)?.id || safeApps[0]?.id || '');
+                    const currentId = siteSettings?.featuredAppId;
                     if (currentId) {
                       await updateSiteSettings({ featuredAppId: currentId });
                       alert(lang === 'fr' 
-                        ? 'L\'application sélectionnée a été enregistrée avec succès pour la page d\'accueil !' 
-                        : 'تم حفظ التطبيق المختار بنجاح للواجهة الرئيسية للموقع !');
+                        ? 'L\'application vedette a été enregistrée avec succès !' 
+                        : 'تم حفظ وتثبيت التطبيق المختار في الواجهة الرئيسية بنجاح!');
                     }
                   }}
-                  className="px-6 py-3 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="px-8 py-4 bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-sm rounded-2xl shadow-2xl shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-white/20"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>{lang === 'fr' ? 'Enregistrer L\'Application Sélectionnée' : 'حفظ إعدادات التطبيق المختار'}</span>
+                  <Save className="w-5 h-5" />
+                  <span>{lang === 'fr' ? 'Enregistrer la Sélection' : 'حفظ إعدادات التطبيق المختار'}</span>
                 </button>
               </div>
             </div>
@@ -2049,6 +2199,72 @@ export const AdminDashboard: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* SOCIAL MEDIA LINKS BOX */}
+            <div className="bg-white dark:bg-slate-900/90 rounded-2xl border border-blue-500/30 p-6 shadow-xl relative overflow-hidden group">
+              <div className="absolute top-0 ltr:right-0 rtl:left-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                <Globe className="w-20 h-20 text-blue-500" />
+              </div>
+
+              <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 mb-2">
+                <Share2 className="w-5 h-5 text-blue-500" />
+                <span>{t.socialSettingsTitle}</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 font-medium">
+                {t.socialSettingsDesc}
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 block mb-1.5 font-bold">Facebook :</label>
+                  <input
+                    type="text"
+                    value={facebookInput}
+                    onChange={(e) => setFacebookInput(e.target.value)}
+                    placeholder="https://facebook.com/..."
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl py-3 px-4 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 block mb-1.5 font-bold">Instagram :</label>
+                  <input
+                    type="text"
+                    value={instagramInput}
+                    onChange={(e) => setInstagramInput(e.target.value)}
+                    placeholder="https://instagram.com/..."
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl py-3 px-4 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 outline-hidden transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 block mb-1.5 font-bold">TikTok :</label>
+                  <input
+                    type="text"
+                    value={tiktokInput}
+                    onChange={(e) => setTiktokInput(e.target.value)}
+                    placeholder="https://tiktok.com/@..."
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl py-3 px-4 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 outline-hidden transition-all"
+                  />
+                </div>
+
+                <button
+                  onClick={() => {
+                    updateSiteSettings({
+                      facebookLink: facebookInput,
+                      instagramLink: instagramInput,
+                      tiktokLink: tiktokInput
+                    });
+                    setCredentialsSavedNotice(true);
+                    setTimeout(() => setCredentialsSavedNotice(false), 3000);
+                  }}
+                  className="w-full px-6 py-4 bg-blue-600 dark:bg-blue-500 text-white dark:text-slate-950 font-black text-sm rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-3"
+                >
+                  <Save className="w-5 h-5" />
+                  <span>{lang === 'fr' ? 'Enregistrer les liens' : 'حفظ روابط التواصل'}</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-6">
@@ -2291,12 +2507,12 @@ export const AdminDashboard: React.FC = () => {
             <div>
               <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Bot className="w-6 h-6 text-amber-500" />
-                <span>{lang === 'fr' ? 'Demandes de Développement (Messages IA)' : 'طلبات البرمجة وتطوير المشاريع (رسائل المساعد الذكي)'}</span>
+                <span>{lang === 'fr' ? 'Prospection & الاستنطاق الذكي (AI Leads)' : 'سجل استنطاق العملاء والفرص البيعية (AI Leads)'}</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
                 {lang === 'fr'
-                  ? 'Consultez les demandes de projets analysées par l\'IA avec les coordonnées et l\'adresse IP des membres.'
-                  : 'استعراض أفكار ودراسات المشاريع التي أرسلها العملاء عبر المساعد الذكي مع بياناتهم الكاملة و IP الخاص بهم.'}
+                  ? 'Liste des prospects ayant discuté avec l\'IA, leurs besoins extraits et leurs coordonnées de contact.'
+                  : 'قائمة بجميع الأشخاص الذين استنطقهم المساعد الذكي، مع تلخيص كامل لاحتياجاتهم البرمجية وأرقام هواتفهم.'}
               </p>
             </div>
 
@@ -2516,9 +2732,9 @@ export const AdminDashboard: React.FC = () => {
 
                         <a
                           href={`mailto:${req.userEmail}?subject=${encodeURIComponent(
-                            `RoiGroupes Holding - بخصوص مشروعك: ${req.projectTitle}`
+                            `RoiGroupes - بخصوص مشروعك: ${req.projectTitle}`
                           )}&body=${encodeURIComponent(
-                            `مرحباً بك أستاذ ${req.userName}،\n\nتلقينا طلبك ودراسة المساعد الذكي لمشروع: ${req.projectTitle}.\n\nيسعدنا تحديد موعد لمناقشة التفاصيل وبدء البرمجة.\n\nتحيات إدارة RoiGroupes Holding.`
+                            `مرحباً بك أستاذ ${req.userName}،\n\nتلقينا طلبك ودراسة المساعد الذكي لمشروع: ${req.projectTitle}.\n\nيسعدنا تحديد موعد لمناقشة التفاصيل وبدء البرمجة.\n\nتحيات إدارة RoiGroupes.`
                           )}`}
                           className="px-4 py-2 bg-slate-900 dark:bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-white font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                         >
@@ -2532,6 +2748,282 @@ export const AdminDashboard: React.FC = () => {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* --- TAB 9: NOTIFICATIONS & NEWS MANAGEMENT --- */}
+      {activeTab === 'notifications' && (
+        <div className="space-y-6 pb-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <Bell className="w-6 h-6 text-amber-500" />
+                <span>{lang === 'fr' ? 'Gestion des News & Notifications' : 'إدارة الأخبار والتنبيهات العامة'}</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                {lang === 'fr'
+                  ? 'Créez des annonces et des flashs infos qui apparaîtront dans la cloche de notification pour tous les membres.'
+                  : 'إرسال تنبيهات وأخبار مباشرة لجميع الأعضاء تظهر في أيقونة الجرس بالأعلى مع إمكانية ربطها بتطبيق معين.'}
+              </p>
+            </div>
+
+            <button
+              onClick={openAddNotifModal}
+              className="px-5 py-2.5 bg-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 flex items-center gap-2 hover:scale-105 transition-transform cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{lang === 'fr' ? 'Nouvelle Notification' : 'إرسال تنبيه جديد'}</span>
+            </button>
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="text-center py-20 bg-white dark:bg-slate-900/90 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 shadow-sm">
+              <Bell className="w-12 h-12 text-slate-200 dark:text-slate-800 mx-auto mb-4" />
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                {lang === 'fr' ? 'Aucune notification envoyée' : 'لم يتم إرسال أي تنبيهات بعد'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                {lang === 'fr'
+                  ? 'Commencez à informer vos membres des dernières mises à jour ou des nouvelles applications.'
+                  : 'ابدأ الآن بإخبار أعضاء الموقع عن آخر التحديثات أو الأخبار الجديدة من مجموعة RoiGroupes.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {notifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm group hover:border-amber-500/30 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        notif.type === 'update' ? 'bg-blue-500/10 text-blue-500' :
+                        notif.type === 'alert' ? 'bg-rose-500/10 text-rose-500' :
+                        'bg-amber-500/10 text-amber-500'
+                      }`}>
+                        {notif.type === 'update' ? <Zap className="w-5 h-5" /> : 
+                         notif.type === 'alert' ? <AlertCircle className="w-5 h-5" /> : <Megaphone className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight">
+                          {lang === 'fr' ? notif.titleFr : notif.titleAr}
+                        </h4>
+                        <span className="text-[10px] text-slate-400 font-mono">{notif.createdAt}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => openEditNotifModal(notif)}
+                        className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(lang === 'fr' ? 'Supprimer cette notification ?' : 'هل أنت متأكد من حذف هذا التنبيه؟')) {
+                            deleteNotification(notif.id);
+                          }
+                        }}
+                        className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2 mb-4 font-medium">
+                    {lang === 'fr' ? notif.messageFr : notif.messageAr}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-50 dark:border-slate-800/50">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg">
+                      {notif.type}
+                    </span>
+                    {notif.targetAppId && (
+                      <div className="text-[10px] text-slate-400 flex items-center gap-1.5 font-bold">
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>{lang === 'fr' ? 'Lié à une App' : 'مرتبط بتطبيق'}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* --- TAB 10: PWA BUILDER / APP GENERATOR --- */}
+      {activeTab === 'pwa_builder' && (
+        <div className="space-y-8 pb-10">
+          <div className="bg-gradient-to-br from-indigo-950 via-slate-950 to-slate-900 rounded-3xl border-2 border-amber-500/40 p-6 sm:p-10 shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 ltr:right-0 rtl:left-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
+              <Smartphone className="w-32 h-32 text-amber-500" />
+            </div>
+
+            <div className="relative z-10 space-y-6">
+              <div className="border-b border-white/10 pb-6">
+                <h2 className="text-2xl font-black text-white flex items-center gap-3 mb-2">
+                  <Smartphone className="w-8 h-8 text-amber-500" />
+                  <span>{lang === 'fr' ? 'Générateur d\'Application Officielle' : 'باني وصانع التطبيق الرسمي للمنصة'}</span>
+                </h2>
+                <p className="text-sm text-slate-400 font-medium max-w-2xl leading-relaxed">
+                  {lang === 'fr' 
+                    ? 'Personnalisez les propriétés de l\'application installable (PWA) de votre plateforme. Définissez le nom, l\'icône et l\'URL de démarrage pour créer une expérience native connectée à votre base de membres.'
+                    : 'قم بتخصيص خصائص "التطبيق المثبت" الخاص بمنصتك. يمكنك تحديد اسم التطبيق، الأيقونة، ورابط البداية ليتمكن الزوار من تثبيت المنصة كتطبيق مستقل على هواتفهم مع بقاء جلسة تسجيل الدخول نشطة.'}
+                </p>
+              </div>
+
+              <form onSubmit={handleSavePwaSettings} className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="space-y-6">
+                  {/* App Name */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                      <Edit className="w-4 h-4 text-amber-500" />
+                      <span>{lang === 'fr' ? 'Nom complet de l\'app' : 'اسم التطبيق الكامل (يظهر تحت الأيقونة)'}</span>
+                    </label>
+                    <input 
+                      type="text"
+                      value={pwaFormTitle}
+                      onChange={(e) => setPwaFormTitle(e.target.value)}
+                      placeholder="Ex: RoiGroupes Store"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-bold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none"
+                    />
+                  </div>
+
+                  {/* Short Name */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      <span>{lang === 'fr' ? 'Nom court (Max 12 chars)' : 'الاسم المختصر (يُفضل أقل من 12 حرف)'}</span>
+                    </label>
+                    <input 
+                      type="text"
+                      value={pwaFormShortName}
+                      onChange={(e) => setPwaFormShortName(e.target.value)}
+                      placeholder="Ex: RoiGroupes"
+                      maxLength={12}
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-bold focus:border-amber-500 outline-none"
+                    />
+                  </div>
+
+                  {/* Start URL */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-amber-500" />
+                      <span>{lang === 'fr' ? 'URL de démarrage' : 'رابط الصفحة الرئيسية (التي يفتح عليها التطبيق)'}</span>
+                    </label>
+                    <input 
+                      type="text"
+                      value={pwaFormStartUrl}
+                      onChange={(e) => setPwaFormStartUrl(e.target.value)}
+                      placeholder="/"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-amber-400 font-mono focus:border-amber-500 outline-none"
+                    />
+                  </div>
+
+                  {/* App Features Suggestion Section */}
+                  <div className="pt-6 border-t border-white/5">
+                    <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>{lang === 'fr' ? 'Fonctionnalités Suggérées' : 'اقتراحات إضافية لعمل التطبيق (App Features)'}</span>
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        { id: 'enableMemberChat', labelAr: 'دردشة مباشرة بين الأعضاء', labelFr: 'Chat entre membres' },
+                        { id: 'enableNotifications', labelAr: 'أيقونة ونظام التنبيهات', labelFr: 'Système de notifications' },
+                        { id: 'enableAppReviews', labelAr: 'نظام التقييم والمراجعات', labelFr: 'Système d\'avis' },
+                        { id: 'enableAIStoreAssistant', labelAr: 'مساعد المتجر الذكي (AI)', labelFr: 'Assistant IA' },
+                        { id: 'enableLiveSupport', labelAr: 'الدعم الفني المباشر', labelFr: 'Support en direct' },
+                        { id: 'enableUserProfiles', labelAr: 'بروفيلات المستخدمين المتقدمة', labelFr: 'Profils utilisateurs' },
+                      ].map((feat) => (
+                        <label key={feat.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${appFeatures[feat.id as keyof typeof appFeatures] ? 'bg-amber-500/10 border-amber-500/50' : 'bg-white/5 border-white/10 opacity-60'}`}>
+                          <span className="text-[11px] font-bold text-white">{lang === 'fr' ? feat.labelFr : feat.labelAr}</span>
+                          <input 
+                            type="checkbox"
+                            checked={!!appFeatures[feat.id as keyof typeof appFeatures]}
+                            onChange={(e) => setAppFeatures({...appFeatures, [feat.id]: e.target.checked})}
+                            className="w-4 h-4 rounded border-white/20 text-amber-500 focus:ring-amber-500/50 bg-transparent cursor-pointer"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Icon Upload */}
+                  <div className="space-y-4">
+                    <label className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-amber-500" />
+                      <span>{lang === 'fr' ? 'Icône de l\'Application' : 'أيقونة التطبيق (صورة مربعة عالية الدقة)'}</span>
+                    </label>
+                    
+                    <div className="flex items-center gap-6 p-6 rounded-[2rem] bg-white/5 border border-white/10">
+                      <div className="relative w-24 h-24 rounded-[1.5rem] overflow-hidden border-4 border-amber-500/30 shrink-0 shadow-2xl bg-slate-900">
+                        <img src={pwaFormIcon} alt="App Icon" className="w-full h-full object-cover" />
+                        {isUploadingPwaIcon && (
+                          <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center">
+                            <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3 flex-1">
+                        <input 
+                          type="file"
+                          id="pwaIconInput"
+                          accept="image/*"
+                          onChange={handlePwaIconUpload}
+                          className="hidden"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => document.getElementById('pwaIconInput')?.click()}
+                          className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <UploadCloud className="w-4 h-4" />
+                          <span>{lang === 'fr' ? 'Changer l\'icône' : 'رفع أيقونة جديدة'}</span>
+                        </button>
+                        <p className="text-[10px] text-slate-500 font-medium leading-snug">
+                          {lang === 'fr' 
+                            ? 'Recommandé : 512x512px, Format carré. Cette image sera utilisée comme icône de lancement sur mobile.' 
+                            : 'المواصفات المطلوبة: 512x512 بكسل، مقاس مربع. ستظهر هذه الصورة كأيقونة تشغيل على شاشة الهاتف.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <button 
+                      type="submit"
+                      className="w-full py-5 bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-base rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:shadow-[0_0_60px_rgba(245,158,11,0.6)] transition-all flex items-center justify-center gap-3 border border-white/20 active:scale-95 cursor-pointer"
+                    >
+                      <Save className="w-6 h-6" />
+                      <span>{lang === 'fr' ? 'Générer & Enregistrer l\'Application' : 'إنشاء وحفظ إعدادات التطبيق الآن'}</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900/90 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 flex flex-col md:flex-row items-center gap-8 group">
+            <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <ShieldCheck className="w-10 h-10 text-emerald-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">{lang === 'fr' ? 'Connexion Directe à la Plateforme' : 'اتصال مباشر وآمن بقاعدة البيانات'}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                {lang === 'fr' 
+                  ? 'L\'application générée partage automatiquement la session de connexion. Vos utilisateurs n\'auront pas à se reconnecter s\'ils ont déjà un compte actif sur le site web.' 
+                  : 'التطبيق الذي يتم إنشاؤه مرتبط برمجياً بالمنصة. أي أن جلسة تسجيل الدخول (Session) مشتركة تماماً؛ فبمجرد دخول العضو من الموقع سيجد نفسه مسجلاً للدخول داخل التطبيق والعكس صحيح.'}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -3035,6 +3527,102 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button type="button" onClick={() => setIsFeaturedModalOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold">{t.closeBtn}</button>
                 <button type="submit" className="px-6 py-2 bg-amber-500 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20">{lang === 'fr' ? 'Enregistrer les modifications' : 'حفظ الإعدادات الفاخرة'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Modal */}
+      {isNotifModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-amber-500/30 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl transition-colors">
+            <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <Bell className="w-5 h-5 text-amber-500" />
+                <span>{editingNotif ? (lang === 'fr' ? 'Modifier la notification' : 'تعديل التنبيه') : (lang === 'fr' ? 'Envoyer une notification' : 'إرسال تنبيه جديد')}</span>
+              </h3>
+              <button onClick={() => setIsNotifModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNotif} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">العنوان (عربي)</label>
+                  <input
+                    type="text"
+                    required
+                    value={notifTitleAr}
+                    onChange={(e) => setNotifTitleAr(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Titre (Français)</label>
+                  <input
+                    type="text"
+                    required
+                    value={notifTitleFr}
+                    onChange={(e) => setNotifTitleFr(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-bold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">نص التنبيه (عربي)</label>
+                <textarea
+                  required
+                  value={notifMessageAr}
+                  onChange={(e) => setNotifMessageAr(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white min-h-[80px] font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Message (Français)</label>
+                <textarea
+                  required
+                  value={notifMessageFr}
+                  onChange={(e) => setNotifMessageFr(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white min-h-[80px] font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">نوع التنبيه</label>
+                  <select
+                    value={notifType}
+                    onChange={(e) => setNotifType(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-bold"
+                  >
+                    <option value="info">إعلام (Info)</option>
+                    <option value="update">تحديث (Update)</option>
+                    <option value="news">خبر (News)</option>
+                    <option value="alert">تنبيه هام (Alert)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">ربط بتطبيق (اختياري)</label>
+                  <select
+                    value={notifTargetAppId}
+                    onChange={(e) => setNotifTargetAppId(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-bold"
+                  >
+                    <option value="">-- بدون ربط --</option>
+                    {apps.map(app => (
+                      <option key={app.id} value={app.id}>{lang === 'fr' ? app.titleFr : app.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button type="button" onClick={() => setIsNotifModalOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold">{t.closeBtn}</button>
+                <button type="submit" className="px-6 py-2 bg-amber-500 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20">{lang === 'fr' ? 'Envoyer' : 'إرسال التنبيه الآن'}</button>
               </div>
             </form>
           </div>

@@ -1,6 +1,6 @@
 {
-  "name": "RoiGroupes.com (RG Store)",
-  "description": "المنصة الرسمية لمجموعة RoiGroupes Holding لعرض وتحميل التطبيقات التجارية والعائلية والأمنية مع لوحة تحكم متكاملة وتسهيل التعليق عبر جوجل وفيسبوك.",
+  "name": "RoiGroupes.com (RGS Store)",
+  "description": "المنصة الرسمية لمجموعة RoiGroupes لعرض وتحميل التطبيقات التجارية والعائلية والأمنية مع لوحة تحكم متكاملة وتسهيل التعليق عبر جوجل وفيسبوك.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

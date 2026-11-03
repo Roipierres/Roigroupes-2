@@ -385,7 +385,7 @@ export const FeaturedAppModal: React.FC = () => {
                             RG
                          </div>
                          <div className="text-white">
-                            <p className="text-xs font-black">@RoiGroupes_Holding</p>
+                            <p className="text-xs font-black">@RoiGroupes</p>
                             <p className="text-[10px] opacity-80">Official Demo</p>
                          </div>
                       </div>

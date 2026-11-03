@@ -10,7 +10,10 @@ import {
   CategoryType,
   CategoryItem,
   ProjectRequestItem,
-  FloatingAdItem
+  FloatingAdItem,
+  NotificationItem,
+  Toast,
+  ChatMessage
 } from '../types';
 import {
   initialApps,
@@ -53,7 +56,7 @@ import {
 import { seedDatabase } from '../lib/seed';
 
 export type ThemeMode = 'dark' | 'light';
-export type ViewState = 'home' | 'category_view' | 'app_detail' | 'admin' | 'all_apps';
+export type ViewState = 'home' | 'category_view' | 'app_detail' | 'admin' | 'all_apps' | 'profile_settings';
 
 interface AppContextType {
   lang: Language;
@@ -141,7 +144,27 @@ interface AppContextType {
   updateAllFloatingAds: (ads: FloatingAdItem[]) => Promise<void>;
   isFeaturedModalOpen: boolean;
   setIsFeaturedModalOpen: (open: boolean) => void;
+  
+  // Notifications & Toasts
+  notifications: NotificationItem[];
+  toasts: Toast[];
+  addToast: (message: string, type?: Toast['type'], duration?: number) => void;
+  removeToast: (id: string) => void;
+  addNotification: (notif: Omit<NotificationItem, 'id' | 'createdAt' | 'isActive'>) => Promise<void>;
+  updateNotification: (notif: NotificationItem) => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+
+  // Chat logic
+  messages: ChatMessage[];
+  sendChatMessage: (receiverId: string, text: string) => Promise<void>;
+  markMessagesRead: (senderId: string) => Promise<void>;
+  isChatOpen: boolean;
+  setIsChatOpen: (open: boolean) => void;
+  activeChatUserId: string | null;
+  setActiveChatUserId: (uid: string | null) => void;
+  openChatWithUser: (uid: string) => void;
 }
+
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -220,14 +243,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isFloatingAdsOpen, setIsFloatingAdsOpen] = useState<boolean>(false);
   const [currentFloatingAdIndex, setCurrentFloatingAdIndex] = useState<number>(0);
 
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
+
+  // --- Toasts Logic ---
+  const addToast = (message: string, type: Toast['type'] = 'info', duration = 3000) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newToast: Toast = { id, message, type, duration };
+    setToasts(prev => [...prev, newToast]);
+    
+    if (duration > 0) {
+      setTimeout(() => removeToast(id), duration);
+    }
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
   // --- Initialization & Seeding ---
   useEffect(() => {
     const init = async () => {
+      // Safety timeout to ensure loading finishes within 5 seconds even if Firestore hangs
+      const timeout = setTimeout(() => {
+        setIsLoading(false);
+      }, 5000);
+
       try {
         await seedDatabase();
       } catch (e) {
         console.error('Seed failed', e);
       } finally {
+        clearTimeout(timeout);
         setIsLoading(false);
       }
     };
@@ -341,6 +391,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log('Floating ads listener note:', err);
     });
 
+    const unsubNotifs = onSnapshot(collection(db, 'notifications'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as NotificationItem));
+      data.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setNotifications(data);
+    }, (err) => {
+      console.log('Notifications listener note:', err);
+    });
+
     return () => {
       unsubApps();
       unsubCats();
@@ -350,8 +408,129 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubUsers();
       unsubRequests();
       unsubFloatingAds();
+      unsubNotifs();
     };
   }, []);
+
+  // --- Peer-to-Peer Chat Real-time Listener ---
+  useEffect(() => {
+    if (!currentUser || !siteSettings.appFeatures?.enableMemberChat) {
+      setMessages([]);
+      return;
+    }
+
+    // Query messages where current user is either sender or receiver
+    const unsubMessages = onSnapshot(
+      query(
+        collection(db, 'chats'),
+        where('senderId', 'in', [currentUser.id, 'all']), // 'all' for broadcast if needed later
+      ),
+      (snapshot) => {
+        const msgs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ChatMessage));
+        // Note: Firestore doesn't support OR queries across different fields easily without index complexing
+        // We will filter in-memory for receiving messages if needed, or better, use a simpler approach
+        // Actually, let's just listen to all chats involving the user by having two queries or a composite if possible
+      }
+    );
+
+    // More efficient listener: listen to all chats, and we filter locally for now as it's a small app
+    // In production we would use two separate listeners for sent/received
+    const unsubSent = onSnapshot(
+      query(collection(db, 'chats'), where('senderId', '==', currentUser.id)),
+      (snapshot) => {
+        const sentMsgs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ChatMessage));
+        setMessages(prev => {
+          const others = prev.filter(m => m.senderId !== currentUser.id);
+          return [...others, ...sentMsgs].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+        });
+      }
+    );
+
+    const unsubReceived = onSnapshot(
+      query(collection(db, 'chats'), where('receiverId', '==', currentUser.id)),
+      (snapshot) => {
+        const receivedMsgs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ChatMessage));
+        setMessages(prev => {
+          const others = prev.filter(m => m.receiverId !== currentUser.id);
+          return [...others, ...receivedMsgs].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+        });
+      }
+    );
+
+    return () => {
+      unsubSent();
+      unsubReceived();
+    };
+  }, [currentUser, siteSettings.appFeatures?.enableMemberChat]);
+
+  const sendChatMessage = async (receiverId: string, text: string) => {
+    if (!currentUser) return;
+    const msgId = `msg-${Date.now()}`;
+    const newMsg: ChatMessage = {
+      id: msgId,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      receiverId,
+      text,
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
+
+    try {
+      await setDoc(doc(db, 'chats', msgId), newMsg);
+    } catch (e) {
+      console.error('Failed to send chat message:', e);
+      addToast(lang === 'fr' ? 'Échec de l\'envoi du message.' : 'فشل إرسال الرسالة.', 'error');
+    }
+  };
+
+  const markMessagesRead = async (senderId: string) => {
+    if (!currentUser) return;
+    const unread = messages.filter(m => m.senderId === senderId && m.receiverId === currentUser.id && !m.isRead);
+    for (const msg of unread) {
+      try {
+        await updateDoc(doc(db, 'chats', msg.id), { isRead: true });
+      } catch (e) {}
+    }
+  };
+
+  const openChatWithUser = (uid: string) => {
+    setActiveChatUserId(uid);
+    setIsChatOpen(true);
+  };
+
+  const addNotification = async (notifData: Omit<NotificationItem, 'id' | 'createdAt' | 'isActive'>) => {
+    const id = `notif-${Date.now()}`;
+    const createdAt = new Date().toISOString();
+    const newNotif: NotificationItem = {
+      ...notifData,
+      id,
+      createdAt,
+      isActive: true
+    };
+    try {
+      await setDoc(doc(db, 'notifications', id), newNotif);
+    } catch (e) {
+      console.error('Failed to add notification:', e);
+    }
+  };
+
+  const updateNotification = async (notif: NotificationItem) => {
+    try {
+      await updateDoc(doc(db, 'notifications', notif.id), { ...notif });
+    } catch (e) {
+      console.error('Failed to update notification:', e);
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+    } catch (e) {
+      console.error('Failed to delete notification:', e);
+    }
+  };
+
 
   // --- Auto-show 3 Floating Banner Ads sequentially on Homepage (Once per session) ---
   useEffect(() => {
@@ -1224,6 +1403,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateAllFloatingAds,
         isFeaturedModalOpen,
         setIsFeaturedModalOpen,
+        notifications,
+        toasts,
+        addToast,
+        removeToast,
+        addNotification,
+        updateNotification,
+        deleteNotification,
+        messages,
+        sendChatMessage,
+        markMessagesRead,
+        isChatOpen,
+        setIsChatOpen,
+        activeChatUserId,
+        setActiveChatUserId,
+        openChatWithUser
       }}
     >
       {children}
