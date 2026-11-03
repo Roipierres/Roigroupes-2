@@ -80,6 +80,18 @@ export interface UserAccount {
   phone?: string;
   bio?: string;
   passwordHash?: string;
+  friends?: string[];
+}
+
+export interface FriendRequest {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  receiverId: string;
+  receiverName?: string;
+  status: 'pending' | 'accepted' | 'declined';
+  timestamp: string;
 }
 
 export interface AdBannerItem {
@@ -147,6 +159,7 @@ export interface SiteSettings {
   pwaShortName?: string;
   pwaStartUrl?: string;
   pwaIcon?: string;
+  officialApkUrl?: string;
   // Feature Toggles for the App/Platform
   appFeatures?: {
     enableMemberChat?: boolean;

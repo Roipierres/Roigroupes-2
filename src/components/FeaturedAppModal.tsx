@@ -27,6 +27,9 @@ export const FeaturedAppModal: React.FC = () => {
     t, 
     isFeaturedModalOpen, 
     setIsFeaturedModalOpen, 
+    featuredModalApp,
+    selectedApp,
+    siteSettings,
     recordDownload 
   } = useApp();
 
@@ -35,14 +38,21 @@ export const FeaturedAppModal: React.FC = () => {
   const [downloadedMB, setDownloadedMB] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
 
-  // Find the current active pinned app
+  // Find the app to showcase
   const now = Date.now();
-  const featuredApp = apps
+  const pinnedApp = apps
     .filter(app => app.pinnedExpiry && app.pinnedExpiry > now)
     .sort((a, b) => (a.pinnedPosition || 0) - (b.pinnedPosition || 0))[0];
 
-  // If no pinned app exists, we can't show the modal
-  if (!featuredApp) return null;
+  const featuredApp = featuredModalApp 
+    || pinnedApp 
+    || (siteSettings?.featuredAppId && apps.find(a => a.id === siteSettings.featuredAppId))
+    || selectedApp 
+    || apps.find(a => a.isFeatured)
+    || apps[0];
+
+  // If modal is not open or no app exists, don't show
+  if (!isFeaturedModalOpen || !featuredApp) return null;
 
   const title = lang === 'fr' ? featuredApp.titleFr : featuredApp.title;
   const fullDesc = lang === 'fr' ? featuredApp.fullDescFr : featuredApp.fullDesc;

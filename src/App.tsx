@@ -6,7 +6,7 @@ import { CategoryShowcase } from './components/CategoryShowcase';
 import { AppGrid } from './components/AppGrid';
 import { CategoryViewPage } from './components/CategoryViewPage';
 import { AppDetailPage } from './components/AppDetailPage';
-import { AIAppAssistant, AIAppAssistantModal } from './components/AIAppAssistant';
+import { AIAppAssistant, AIAppAssistantModal, AIAppAssistantButton } from './components/AIAppAssistant';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdBanner } from './components/AdBanner';
 import { AuthModal } from './components/AuthModal';
@@ -15,9 +15,12 @@ import { AllAppsModal } from './components/AllAppsModal';
 import { PinnedAppsBanner } from './components/PinnedAppsBanner';
 import { ProfilePage } from './components/ProfilePage';
 import { FloatingAdsModal } from './components/FloatingAdsModal';
+import { FeaturedAppModal } from './components/FeaturedAppModal';
 import { Footer } from './components/Footer';
 import { FloatingActions } from './components/FloatingActions';
+import { BottomNav } from './components/BottomNav';
 import { ToastContainer } from './components/ToastContainer';
+import { SelectedAppCard } from './components/SelectedAppCard';
 import { ArrowLeft, Grid } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
@@ -76,37 +79,14 @@ const MainLayout: React.FC = () => {
       <main className="flex-1 w-full overflow-x-hidden">
         {/* Concise Streamlined Homepage */}
         {currentView === 'home' && (
-          <div className="w-full flex flex-col gap-2 sm:gap-4">
+          <div className="w-full flex flex-col gap-2 sm:gap-4 pb-12">
             <Hero />
-            <PinnedAppsBanner />
-            <CategoryShowcase />
 
             {/* Smart Software Development AI Assistant */}
-            {siteSettings.appFeatures?.enableAIStoreAssistant !== false && <AIAppAssistant />}
+            {siteSettings.appFeatures?.enableAIStoreAssistant !== false && <AIAppAssistantButton />}
 
-            {/* Professional Button to Show All Apps */}
-            <div className="py-8 sm:py-12 px-4 flex flex-col items-center justify-center text-center bg-white dark:bg-slate-900 border-t border-b border-slate-100 dark:border-slate-800 my-4 sm:my-6">
-              <div className="mb-4 sm:mb-6 max-w-lg">
-                <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mb-2">
-                  {lang === 'fr' ? 'Découvrir tout le catalogue' : 'اكتشف كامل دليل تطبيقات RoiGroupes'}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  {lang === 'fr' 
-                    ? 'Accédez à plus de 980 applications officielles et sécurisées dans toutes les catégories.'
-                    : 'تصفح أكثر من 980 تطبيقاً رسمياً وموثوقاً في مختلف الفئات التجارية والعائلية والأمنية.'}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setIsAllAppsModalOpen(true)}
-                className="group relative flex items-center gap-3 px-6 sm:px-10 py-3.5 sm:py-4 bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 font-black text-base sm:text-lg rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity dark:hidden" />
-                <Grid className="w-5 h-5 sm:w-6 sm:h-6 relative z-10" />
-                <span className="relative z-10">{lang === 'fr' ? 'Afficher toutes les applications' : 'عرض جميع التطبيقات'}</span>
-                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 relative z-10 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
-              </button>
-            </div>
+            {/* Selected / Featured Application under AI Assistant */}
+            <SelectedAppCard />
           </div>
         )}
 
@@ -146,12 +126,14 @@ const MainLayout: React.FC = () => {
       </main>
 
       <Footer />
+      <BottomNav />
 
       {/* Global Modals */}
       <AuthModal />
       <DownloadModal />
       <AllAppsModal />
       <FloatingAdsModal />
+      <FeaturedAppModal />
       {siteSettings.appFeatures?.enableAIStoreAssistant !== false && <AIAppAssistantModal />}
       
       {/* Floating Action Buttons */}

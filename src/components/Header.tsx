@@ -40,7 +40,8 @@ export const Header: React.FC = () => {
     logout,
     apps,
     categories,
-    siteSettings
+    siteSettings,
+    notifications
   } = useApp();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -222,7 +223,7 @@ export const Header: React.FC = () => {
                       }`}
                     >
                       <Bell className="w-5 h-5" />
-                      {useApp().notifications.length > 0 && (
+                      {notifications.length > 0 && (
                         <span className="absolute top-1.5 ltr:right-1.5 rtl:left-1.5 w-2 h-2 bg-rose-500 rounded-full border border-white dark:border-slate-950 animate-pulse" />
                       )}
                     </button>

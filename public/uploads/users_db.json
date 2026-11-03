@@ -1,0 +1,24 @@
+[
+  {
+    "id": "guest-mw0eg2nw-kbo8",
+    "name": "زائر المنصة",
+    "email": "guest-mw0eg2nw-kbo8@visitor.roigroupes.com",
+    "avatar": "https://ui-avatars.com/api/?name=Guest&background=f59e0b&color=020617",
+    "role": "user",
+    "provider": "email",
+    "status": "active",
+    "joinedDate": "2026-11-03T08:01:49.436Z",
+    "lastSeen": "2026-11-03T08:01:49.441Z"
+  },
+  {
+    "id": "guest-mw0ffni6-ovkz",
+    "name": "زائر المنصة",
+    "email": "guest-mw0ffni6-ovkz@visitor.roigroupes.com",
+    "avatar": "https://ui-avatars.com/api/?name=Guest&background=f59e0b&color=020617",
+    "role": "user",
+    "provider": "email",
+    "status": "active",
+    "joinedDate": "2026-11-03T08:29:29.406Z",
+    "lastSeen": "2026-11-03T08:29:29.432Z"
+  }
+]

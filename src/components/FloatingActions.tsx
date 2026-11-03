@@ -37,7 +37,8 @@ export const FloatingActions: React.FC = () => {
     isChatOpen,
     setIsChatOpen,
     activeChatUserId,
-    setActiveChatUserId
+    setActiveChatUserId,
+    ensureUserSession
   } = useApp();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -299,55 +300,54 @@ export const FloatingActions: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Member Chat Floating Button - Forced Visibility for verification */}
-      {true && (
-        <div className="relative pointer-events-auto" ref={chatRef}>
-          <AnimatePresence>
-            {isChatOpen && currentUser && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                className="absolute bottom-14 ltr:right-0 rtl:left-0 w-80 sm:w-96 h-[500px] max-h-[70vh] bg-white dark:bg-slate-900 border-2 border-amber-500/30 rounded-3xl shadow-2xl z-50 overflow-hidden"
-              >
-                {activeChatUserId ? (
-                  <MemberChat 
-                    receiverId={activeChatUserId} 
-                    onBack={() => setActiveChatUserId(null)} 
-                    onClose={() => setIsChatOpen(false)} 
-                  />
-                ) : (
-                  <ChatList 
-                    onSelectUser={(uid) => setActiveChatUserId(uid)} 
-                    onClose={() => setIsChatOpen(false)} 
-                  />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                if (!currentUser) {
-                  setIsAuthModalOpen(true);
-                  return;
-                }
-                setIsChatOpen(!isChatOpen);
-              }}
-              className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 transition-all flex items-center justify-center cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] ${
-                isChatOpen && currentUser
-                  ? 'bg-amber-500 border-amber-400 text-slate-950 scale-110' 
-                  : 'bg-slate-900 dark:bg-slate-800 border-amber-500/40 text-amber-500 hover:scale-110'
-              }`}
-              title={lang === 'fr' ? 'Messagerie' : 'الدردشة والرسائل'}
+      {/* Member & Support Chat Floating Button */}
+      <div className="relative pointer-events-auto" ref={chatRef}>
+        <AnimatePresence>
+          {isChatOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2 }}
+              className="fixed bottom-16 sm:bottom-20 ltr:right-2 sm:ltr:right-5 rtl:left-2 sm:rtl:left-5 w-[calc(100vw-1.25rem)] sm:w-80 max-w-[350px] h-[440px] max-h-[68vh] bg-white dark:bg-slate-900 border-2 border-amber-500/40 rounded-3xl shadow-2xl z-[9999] overflow-hidden flex flex-col pointer-events-auto"
             >
-              <MessageSquare className="w-5 h-5" />
+              {activeChatUserId ? (
+                <MemberChat 
+                  receiverId={activeChatUserId} 
+                  onBack={() => setActiveChatUserId(null)} 
+                  onClose={() => setIsChatOpen(false)} 
+                />
+              ) : (
+                <ChatList 
+                  onSelectUser={(uid) => setActiveChatUserId(uid)} 
+                  onClose={() => setIsChatOpen(false)} 
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              if (!currentUser) {
+                ensureUserSession();
+              }
+              setIsChatOpen(!isChatOpen);
+            }}
+            className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 transition-all flex items-center justify-center cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] ${
+              isChatOpen
+                ? 'bg-amber-500 border-amber-400 text-slate-950 scale-110' 
+                : 'bg-slate-900 dark:bg-slate-800 border-amber-500/40 text-amber-500 hover:scale-110'
+            }`}
+            title={lang === 'fr' ? 'Messagerie Directe' : 'الدردشة والرسائل المباشرة'}
+          >
+            <MessageSquare className="w-5 h-5" />
               {currentUser && unreadMessagesCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center bg-rose-600 text-white text-[10px] font-black rounded-full border-2 border-white dark:border-slate-900 animate-bounce">
                   {unreadMessagesCount}
@@ -356,7 +356,6 @@ export const FloatingActions: React.FC = () => {
             </button>
           </motion.div>
         </div>
-      )}
 
       {/* Floating Ads Trigger Button */}
       <motion.div

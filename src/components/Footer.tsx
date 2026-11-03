@@ -18,21 +18,23 @@ export const Footer: React.FC = () => {
               alt="RoiGroupes Logo"
               className="w-12 h-12 rounded-xl object-cover border border-amber-500/40 shadow-sm"
             />
-            <div>
-              <span className="text-lg font-black text-slate-900 dark:text-white block leading-tight text-left rtl:text-right" dir="ltr">
+            <div className="text-center" dir="ltr">
+              <bdo dir="ltr" className="text-lg font-black text-slate-900 dark:text-white inline-block leading-tight">
                 RoiGroupe<span className="text-red-500">S</span><span className="text-amber-600 dark:text-amber-400">.com</span>
-              </span>
+              </bdo>
             </div>
           </div>
 
           <div className="text-slate-600 dark:text-slate-400 max-w-lg leading-relaxed font-medium flex flex-col items-center">
             {lang === 'ar' ? (
               <>
-                <span>المنصة الرائدة الرسمية التابعة لمجموعة</span>
-                <span className="inline-flex items-center py-1" dir="ltr">
-                  RoiGroupe<span className="text-red-500">S</span>
-                </span>
-                <span>لبرمجة و عرض تطبيقات تجارية وعائلية وأمنية.</span>
+                <span className="text-xs">المنصة الرائدة الرسمية التابعة لمجموعة</span>
+                <div className="py-1 text-center" dir="ltr">
+                  <bdo dir="ltr" className="inline-block font-black text-sm text-slate-900 dark:text-white">
+                    RoiGroupe<span className="text-red-500 font-black">S</span>
+                  </bdo>
+                </div>
+                <span className="text-xs">لبرمجة و عرض تطبيقات تجارية وعائلية وأمنية.</span>
               </>
             ) : (
               <p>
@@ -40,7 +42,7 @@ export const Footer: React.FC = () => {
                   <React.Fragment key={index}>
                     {part}
                     {index < array.length - 1 && (
-                      <span dir="ltr">RoiGroupe<span className="text-red-500">S</span></span>
+                      <bdo dir="ltr" className="inline-block font-bold">RoiGroupe<span className="text-red-500">S</span></bdo>
                     )}
                   </React.Fragment>
                 ))}
@@ -93,7 +95,7 @@ export const Footer: React.FC = () => {
               <React.Fragment key={index}>
                 {part}
                 {index < array.length - 1 && (
-                  <span dir="ltr">RoiGroupe<span className="text-red-500">S</span></span>
+                  <bdo dir="ltr" className="inline-block font-bold">RoiGroupe<span className="text-red-500">S</span></bdo>
                 )}
               </React.Fragment>
             ))}

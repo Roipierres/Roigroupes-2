@@ -1,0 +1,42 @@
+[
+  {
+    "id": "msg-1793692867924-d4se",
+    "senderId": "test-client",
+    "senderName": "عميل تجريبي",
+    "senderAvatar": "",
+    "receiverId": "user-admin",
+    "text": "مرحبا، أود الاستفسار عن برمجة تطبيق جديد",
+    "timestamp": "2026-11-03T08:01:07.924Z",
+    "isRead": false
+  },
+  {
+    "id": "msg-1793692985945-qmvh",
+    "senderId": "guest-mw0eg2nw-kbo8",
+    "senderName": "زائر المنصة",
+    "senderAvatar": "",
+    "receiverId": "user-admin",
+    "text": "💡 أريد استشارة حول برمجة تطبيق جديد",
+    "timestamp": "2026-11-03T08:03:05.945Z",
+    "isRead": false
+  },
+  {
+    "id": "msg-1793693002883-acpb",
+    "senderId": "guest-mw0eg2nw-kbo8",
+    "senderName": "زائر المنصة",
+    "senderAvatar": "",
+    "receiverId": "user-admin",
+    "text": "هل يمكنكم برمجة تطبيق أندرويد لشركتي مع فاتورة؟",
+    "timestamp": "2026-11-03T08:03:22.883Z",
+    "isRead": false
+  },
+  {
+    "id": "msg-1793694655832-cve9",
+    "senderId": "guest-mw0ffni6-ovkz",
+    "senderName": "زائر المنصة",
+    "senderAvatar": "",
+    "receiverId": "user-admin",
+    "text": "مرحبا، أود الاستفسار حول برمجة تطبيق جديد",
+    "timestamp": "2026-11-03T08:30:55.832Z",
+    "isRead": false
+  }
+]

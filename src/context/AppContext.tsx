@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { playChatNotificationSound } from '../utils/chatSound';
 import {
   AppItem,
   ReviewItem,
@@ -13,7 +14,8 @@ import {
   FloatingAdItem,
   NotificationItem,
   Toast,
-  ChatMessage
+  ChatMessage,
+  FriendRequest
 } from '../types';
 import {
   initialApps,
@@ -144,6 +146,9 @@ interface AppContextType {
   updateAllFloatingAds: (ads: FloatingAdItem[]) => Promise<void>;
   isFeaturedModalOpen: boolean;
   setIsFeaturedModalOpen: (open: boolean) => void;
+  featuredModalApp: AppItem | null;
+  setFeaturedModalApp: (app: AppItem | null) => void;
+  openFeaturedModal: (app?: AppItem) => void;
   
   // Notifications & Toasts
   notifications: NotificationItem[];
@@ -163,6 +168,14 @@ interface AppContextType {
   activeChatUserId: string | null;
   setActiveChatUserId: (uid: string | null) => void;
   openChatWithUser: (uid: string) => void;
+  ensureUserSession: () => UserAccount;
+
+  // Friend Requests & Friendship
+  friendRequests: FriendRequest[];
+  sendFriendRequest: (targetUserId: string) => Promise<{ success: boolean; message?: string }>;
+  acceptFriendRequest: (requestId: string) => Promise<void>;
+  declineFriendRequest: (requestId: string) => Promise<void>;
+  isFriend: (userId: string) => boolean;
 }
 
 
@@ -240,14 +253,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAIAssistantModalOpen, setIsAIAssistantModalOpen] = useState<boolean>(false);
   const [activeDownloadApp, setActiveDownloadApp] = useState<AppItem | null>(null);
   const [isFeaturedModalOpen, setIsFeaturedModalOpen] = useState<boolean>(false);
+  const [featuredModalApp, setFeaturedModalApp] = useState<AppItem | null>(null);
   const [isFloatingAdsOpen, setIsFloatingAdsOpen] = useState<boolean>(false);
   const [currentFloatingAdIndex, setCurrentFloatingAdIndex] = useState<number>(0);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const activeUserStr = localStorage.getItem('rg_active_user');
+      if (activeUserStr) {
+        const u = JSON.parse(activeUserStr);
+        if (u?.id) {
+          const cached = localStorage.getItem(`rg_chat_messages_${u.id}`);
+          if (cached) return JSON.parse(cached);
+        }
+      }
+    } catch (e) {}
+    return [];
+  });
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>(() => {
+    try {
+      const activeUserStr = localStorage.getItem('rg_active_user');
+      if (activeUserStr) {
+        const u = JSON.parse(activeUserStr);
+        if (u?.id) {
+          const cached = localStorage.getItem(`rg_friend_requests_${u.id}`);
+          if (cached) return JSON.parse(cached);
+        }
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  const openFeaturedModal = (app?: AppItem) => {
+    if (app) {
+      setFeaturedModalApp(app);
+    } else if (selectedApp) {
+      setFeaturedModalApp(selectedApp);
+    } else if (apps.length > 0) {
+      const found = (siteSettings?.featuredAppId && apps.find(a => a.id === siteSettings.featuredAppId)) 
+        || apps.find(a => a.isFeatured) 
+        || apps[0];
+      setFeaturedModalApp(found);
+    }
+    setIsFeaturedModalOpen(true);
+  };
 
   // --- Toasts Logic ---
   const addToast = (message: string, type: Toast['type'] = 'info', duration = 3000) => {
@@ -366,7 +419,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       const usersData = snapshot.docs.map(doc => ({ ...doc.data() } as UserAccount));
-      setUsers(usersData);
+      const userMap = new Map<string, UserAccount>();
+      initialUsers.forEach(u => userMap.set(u.id, u));
+      usersData.forEach(u => userMap.set(u.id, u));
+      setUsers(Array.from(userMap.values()));
     });
 
     const unsubRequests = onSnapshot(collection(db, 'projectRequests'), (snapshot) => {
@@ -412,92 +468,454 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // --- Peer-to-Peer Chat Real-time Listener ---
+  // --- Peer-to-Peer Chat Real-time Engine with Dual-Transport Sync ---
+  const knownMessageIdsRef = useRef<Set<string>>(new Set());
+  const isInitialChatLoadRef = useRef(true);
+
+  // Sync users from server registry on mount and periodically
   useEffect(() => {
-    if (!currentUser || !siteSettings.appFeatures?.enableMemberChat) {
-      setMessages([]);
-      return;
+    const syncServerUsers = async () => {
+      try {
+        const res = await fetch('/api/chat/users');
+        if (res.ok) {
+          const serverUsers: UserAccount[] = await res.json();
+          if (Array.isArray(serverUsers) && serverUsers.length > 0) {
+            setUsers(prev => {
+              const map = new Map<string, UserAccount>();
+              prev.forEach(u => map.set(u.id, u));
+              serverUsers.forEach(u => {
+                if (map.has(u.id)) {
+                  map.set(u.id, { ...map.get(u.id)!, ...u });
+                } else {
+                  map.set(u.id, u);
+                }
+              });
+              return Array.from(map.values());
+            });
+          }
+        }
+      } catch (e) {}
+    };
+
+    syncServerUsers();
+    const interval = setInterval(syncServerUsers, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Main Chat Listener (Firestore Real-time + Local Cache)
+  useEffect(() => {
+    if (!siteSettings.appFeatures?.enableMemberChat) return;
+
+    // Load initial cached messages
+    if (currentUser?.id) {
+      try {
+        const cached = localStorage.getItem(`rg_chat_messages_${currentUser.id}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((m: ChatMessage) => knownMessageIdsRef.current.add(m.id));
+            setMessages(parsed);
+          }
+        }
+      } catch (e) {}
     }
 
-    // Query messages where current user is either sender or receiver
-    const unsubMessages = onSnapshot(
-      query(
-        collection(db, 'chats'),
-        where('senderId', 'in', [currentUser.id, 'all']), // 'all' for broadcast if needed later
-      ),
-      (snapshot) => {
-        const msgs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ChatMessage));
-        // Note: Firestore doesn't support OR queries across different fields easily without index complexing
-        // We will filter in-memory for receiving messages if needed, or better, use a simpler approach
-        // Actually, let's just listen to all chats involving the user by having two queries or a composite if possible
-      }
+    const isAdmin = currentUser && (
+      currentUser.role === 'admin' ||
+      currentUser.id === 'user-admin' ||
+      currentUser.id === 'user-manager' ||
+      currentUser.email === 'bahrinho93@gmail.com' ||
+      currentUser.email === 'manager@roigroupes.com'
     );
 
-    // More efficient listener: listen to all chats, and we filter locally for now as it's a small app
-    // In production we would use two separate listeners for sent/received
-    const unsubSent = onSnapshot(
-      query(collection(db, 'chats'), where('senderId', '==', currentUser.id)),
-      (snapshot) => {
-        const sentMsgs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ChatMessage));
-        setMessages(prev => {
-          const others = prev.filter(m => m.senderId !== currentUser.id);
-          return [...others, ...sentMsgs].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-        });
-      }
-    );
+    const unsubChats = onSnapshot(collection(db, 'chats'), (snapshot) => {
+      const allMsgs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ChatMessage));
+      
+      const relevantMsgs = allMsgs.filter(m => {
+        if (!currentUser) return false;
+        if (isAdmin) {
+          // Admin sees all messages addressed to them, to user-admin, to user-manager, or sent by them
+          return (
+            m.senderId === currentUser.id ||
+            m.receiverId === currentUser.id ||
+            m.receiverId === 'user-admin' ||
+            m.receiverId === 'user-manager' ||
+            m.senderId === 'user-admin' ||
+            m.senderId === 'user-manager'
+          );
+        }
+        // Regular user sees their own sent and received messages, including chats with user-admin/support
+        return (
+          m.senderId === currentUser.id ||
+          m.receiverId === currentUser.id
+        );
+      });
 
-    const unsubReceived = onSnapshot(
-      query(collection(db, 'chats'), where('receiverId', '==', currentUser.id)),
-      (snapshot) => {
-        const receivedMsgs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ChatMessage));
-        setMessages(prev => {
-          const others = prev.filter(m => m.receiverId !== currentUser.id);
-          return [...others, ...receivedMsgs].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-        });
+      relevantMsgs.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+      // Sound chime check for new incoming messages
+      if (!isInitialChatLoadRef.current && currentUser) {
+        for (const msg of relevantMsgs) {
+          if (!knownMessageIdsRef.current.has(msg.id)) {
+            knownMessageIdsRef.current.add(msg.id);
+            if (msg.senderId !== currentUser.id) {
+              playChatNotificationSound();
+            }
+          }
+        }
+      } else {
+        relevantMsgs.forEach(m => knownMessageIdsRef.current.add(m.id));
+        isInitialChatLoadRef.current = false;
       }
-    );
+
+      setMessages(prev => {
+        const map = new Map<string, ChatMessage>();
+        prev.forEach(m => map.set(m.id, m));
+        relevantMsgs.forEach(m => map.set(m.id, m));
+        const merged = Array.from(map.values()).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+        if (currentUser?.id) {
+          try {
+            localStorage.setItem(`rg_chat_messages_${currentUser.id}`, JSON.stringify(merged));
+          } catch (e) {}
+        }
+        return merged;
+      });
+    }, (err) => {
+      console.warn('Chats onSnapshot notice (falling back to dual server sync):', err);
+    });
+
+    return () => unsubChats();
+  }, [currentUser?.id, currentUser?.email, currentUser?.role, siteSettings.appFeatures?.enableMemberChat]);
+
+  // Secondary Fallback: Polling Server REST endpoint every 3.5s for 100% guarantee
+  useEffect(() => {
+    if (!currentUser?.id || !siteSettings.appFeatures?.enableMemberChat) return;
+
+    const pollServerChats = async () => {
+      try {
+        const res = await fetch(`/api/chat/messages?userId=${encodeURIComponent(currentUser.id)}`);
+        if (res.ok) {
+          const serverMsgs: ChatMessage[] = await res.json();
+          if (Array.isArray(serverMsgs) && serverMsgs.length > 0) {
+            let hasNewIncoming = false;
+            serverMsgs.forEach(m => {
+              if (!knownMessageIdsRef.current.has(m.id)) {
+                knownMessageIdsRef.current.add(m.id);
+                if (m.senderId !== currentUser.id) {
+                  hasNewIncoming = true;
+                }
+              }
+            });
+
+            if (hasNewIncoming && !isInitialChatLoadRef.current) {
+              playChatNotificationSound();
+            }
+
+            setMessages(prev => {
+              const map = new Map<string, ChatMessage>();
+              prev.forEach(m => map.set(m.id, m));
+              serverMsgs.forEach(m => map.set(m.id, m));
+              const merged = Array.from(map.values()).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+              try {
+                localStorage.setItem(`rg_chat_messages_${currentUser.id}`, JSON.stringify(merged));
+              } catch (e) {}
+              return merged;
+            });
+          }
+        }
+      } catch (e) {}
+    };
+
+    const timer = setInterval(pollServerChats, 3500);
+    pollServerChats();
+    return () => clearInterval(timer);
+  }, [currentUser?.id, siteSettings.appFeatures?.enableMemberChat]);
+
+  // Friend Requests Dual-Transport Real-time Listener
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const unsubFriendReqs = onSnapshot(collection(db, 'friendRequests'), (snapshot) => {
+      const allReqs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as FriendRequest));
+      const relevant = allReqs.filter(r => r.senderId === currentUser.id || r.receiverId === currentUser.id);
+      setFriendRequests(prev => {
+        const map = new Map<string, FriendRequest>();
+        prev.forEach(r => map.set(r.id, r));
+        relevant.forEach(r => map.set(r.id, r));
+        const merged = Array.from(map.values()).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+        try {
+          localStorage.setItem(`rg_friend_requests_${currentUser.id}`, JSON.stringify(merged));
+        } catch (e) {}
+        return merged;
+      });
+    }, (err) => {
+      console.warn('Friend requests onSnapshot notice:', err);
+    });
+
+    const pollServerFriendReqs = async () => {
+      try {
+        const res = await fetch(`/api/chat/friend-requests?userId=${encodeURIComponent(currentUser.id)}`);
+        if (res.ok) {
+          const serverReqs: FriendRequest[] = await res.json();
+          if (Array.isArray(serverReqs)) {
+            setFriendRequests(prev => {
+              const map = new Map<string, FriendRequest>();
+              prev.forEach(r => map.set(r.id, r));
+              serverReqs.forEach(r => map.set(r.id, r));
+              return Array.from(map.values()).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+            });
+          }
+        }
+      } catch (e) {}
+    };
+
+    pollServerFriendReqs();
+    const interval = setInterval(pollServerFriendReqs, 6000);
 
     return () => {
-      unsubSent();
-      unsubReceived();
+      unsubFriendReqs();
+      clearInterval(interval);
     };
-  }, [currentUser, siteSettings.appFeatures?.enableMemberChat]);
+  }, [currentUser?.id]);
+
+
+  const ensureUserSession = (): UserAccount => {
+    if (currentUser) return currentUser;
+    let guestId = '';
+    try {
+      guestId = localStorage.getItem('rg_guest_uid') || '';
+    } catch (e) {}
+    if (!guestId) {
+      guestId = `guest-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+      try {
+        localStorage.setItem('rg_guest_uid', guestId);
+      } catch (e) {}
+    }
+    const guestUser: UserAccount = {
+      id: guestId,
+      name: lang === 'fr' ? 'Visiteur' : 'زائر المنصة',
+      email: `${guestId}@visitor.roigroupes.com`,
+      avatar: 'https://ui-avatars.com/api/?name=Guest&background=f59e0b&color=020617',
+      role: 'user',
+      provider: 'email',
+      status: 'active',
+      joinedDate: new Date().toISOString()
+    };
+    setCurrentUser(guestUser);
+    try {
+      localStorage.setItem('rg_active_user', JSON.stringify(guestUser));
+    } catch (e) {}
+
+    // Register guest in Firestore and server registry in background so other parties see them
+    setDoc(doc(db, 'users', guestId), guestUser).catch(() => {});
+    fetch('/api/chat/register-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(guestUser)
+    }).catch(() => {});
+
+    return guestUser;
+  };
 
   const sendChatMessage = async (receiverId: string, text: string) => {
-    if (!currentUser) return;
-    const msgId = `msg-${Date.now()}`;
+    let sender = currentUser;
+    if (!sender) {
+      sender = ensureUserSession();
+    }
+    if (!sender || !text.trim()) return;
+
+    const msgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const newMsg: ChatMessage = {
       id: msgId,
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      receiverId,
-      text,
+      senderId: String(sender.id),
+      senderName: String(sender.name || 'مستخدم'),
+      receiverId: String(receiverId),
+      text: text.trim(),
       timestamp: new Date().toISOString(),
       isRead: false
     };
 
-    try {
-      await setDoc(doc(db, 'chats', msgId), newMsg);
-    } catch (e) {
-      console.error('Failed to send chat message:', e);
-      addToast(lang === 'fr' ? 'Échec de l\'envoi du message.' : 'فشل إرسال الرسالة.', 'error');
-    }
+    // Mark as known
+    knownMessageIdsRef.current.add(msgId);
+
+    // 1. Instant optimistic state update
+    setMessages(prev => {
+      const next = [...prev, newMsg];
+      try {
+        localStorage.setItem(`rg_chat_messages_${sender!.id}`, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
+    // 2. Dual-transport persistence (Firestore + Server REST)
+    const promises: Promise<any>[] = [];
+    
+    // Firestore write
+    promises.push(
+      setDoc(doc(db, 'chats', msgId), newMsg).catch(err => {
+        console.warn('Firestore chat notice (synced via server):', err);
+      })
+    );
+
+    // Express server write
+    promises.push(
+      fetch('/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMsg)
+      }).catch(err => {
+        console.warn('Server chat write notice:', err);
+      })
+    );
+
+    await Promise.allSettled(promises);
   };
 
   const markMessagesRead = async (senderId: string) => {
     if (!currentUser) return;
     const unread = messages.filter(m => m.senderId === senderId && m.receiverId === currentUser.id && !m.isRead);
+    
+    // Update local state immediately
+    setMessages(prev => prev.map(m => (m.senderId === senderId && m.receiverId === currentUser.id) ? { ...m, isRead: true } : m));
+
+    // Dual-sync read status
     for (const msg of unread) {
-      try {
-        await updateDoc(doc(db, 'chats', msg.id), { isRead: true });
-      } catch (e) {}
+      updateDoc(doc(db, 'chats', msg.id), { isRead: true }).catch(() => {});
     }
+
+    fetch('/api/chat/read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderId, receiverId: currentUser.id })
+    }).catch(() => {});
   };
 
   const openChatWithUser = (uid: string) => {
+    if (!currentUser) {
+      ensureUserSession();
+    }
     setActiveChatUserId(uid);
     setIsChatOpen(true);
   };
+
+  const isFriend = (userId: string): boolean => {
+    if (!currentUser) return false;
+    // Admin is everyone's friend and can message everyone
+    const isAdmin = currentUser.role === 'admin' || currentUser.id === 'user-admin' || currentUser.id === 'user-manager' || currentUser.email === 'bahrinho93@gmail.com' || currentUser.email === 'manager@roigroupes.com';
+    if (isAdmin) return true;
+    if (userId === 'user-admin' || userId === 'user-manager') return true;
+
+    // Check currentUser.friends array
+    if (currentUser.friends && Array.isArray(currentUser.friends) && currentUser.friends.includes(userId)) return true;
+
+    // Check accepted requests in state
+    return friendRequests.some(r => 
+      r.status === 'accepted' && 
+      ((r.senderId === currentUser.id && r.receiverId === userId) || 
+       (r.receiverId === currentUser.id && r.senderId === userId))
+    );
+  };
+
+  const sendFriendRequest = async (targetUserId: string): Promise<{ success: boolean; message?: string }> => {
+    let sender = currentUser;
+    if (!sender) {
+      sender = ensureUserSession();
+    }
+    if (!sender || targetUserId === sender.id) {
+      return { success: false, message: 'Invalid target' };
+    }
+
+    const targetUser = users.find(u => u.id === targetUserId);
+    const reqId = `freq-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newReq: FriendRequest = {
+      id: reqId,
+      senderId: sender.id,
+      senderName: sender.name || 'مستخدم',
+      senderAvatar: sender.avatar || '',
+      receiverId: targetUserId,
+      receiverName: targetUser?.name || 'عضو',
+      status: 'pending',
+      timestamp: new Date().toISOString()
+    };
+
+    // Optimistic state
+    setFriendRequests(prev => {
+      const filtered = prev.filter(r => !(r.senderId === sender!.id && r.receiverId === targetUserId));
+      const next = [newReq, ...filtered];
+      try {
+        localStorage.setItem(`rg_friend_requests_${sender!.id}`, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
+    // Dual persist (Firestore + Server)
+    setDoc(doc(db, 'friendRequests', reqId), newReq).catch(() => {});
+    fetch('/api/chat/friend-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newReq)
+    }).catch(() => {});
+
+    addToast(lang === 'fr' ? 'Demande d\'ami envoyée !' : 'تم إرسال طلب الصداقة بنجاح!', 'success');
+    return { success: true };
+  };
+
+  const acceptFriendRequest = async (requestId: string) => {
+    if (!currentUser) return;
+    const reqItem = friendRequests.find(r => r.id === requestId);
+    if (!reqItem) return;
+
+    const partnerId = reqItem.senderId === currentUser.id ? reqItem.receiverId : reqItem.senderId;
+
+    // 1. Update friend requests state
+    setFriendRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'accepted' as const } : r));
+
+    // 2. Add to currentUser friends
+    const currentFriends = Array.isArray(currentUser.friends) ? currentUser.friends : [];
+    const updatedFriends = Array.from(new Set([...currentFriends, partnerId]));
+    const updatedUser: UserAccount = {
+      ...currentUser,
+      friends: updatedFriends
+    };
+    setCurrentUser(updatedUser);
+    try {
+      localStorage.setItem('rg_active_user', JSON.stringify(updatedUser));
+      const cached = localStorage.getItem(`rg_friend_requests_${currentUser.id}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const updated = parsed.map((r: FriendRequest) => r.id === requestId ? { ...r, status: 'accepted' } : r);
+        localStorage.setItem(`rg_friend_requests_${currentUser.id}`, JSON.stringify(updated));
+      }
+    } catch (e) {}
+
+    // 3. Persist friend request status
+    updateDoc(doc(db, 'friendRequests', requestId), { status: 'accepted' }).catch(() => {});
+    fetch('/api/chat/friend-request/respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestId, status: 'accepted', userId: currentUser.id })
+    }).catch(() => {});
+
+    // 4. Persist updated user friends array in Firestore & users state
+    updateDoc(doc(db, 'users', currentUser.id), { friends: updatedFriends }).catch(() => {});
+    setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, friends: updatedFriends } : u));
+
+    addToast(lang === 'fr' ? 'Demande d\'ami acceptée ! Vous pouvez maintenant discuter.' : 'تم قبول طلب الصداقة! يمكنكما الآن التواصل.', 'success');
+  };
+
+  const declineFriendRequest = async (requestId: string) => {
+    setFriendRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'declined' as const } : r));
+
+    updateDoc(doc(db, 'friendRequests', requestId), { status: 'declined' }).catch(() => {});
+    fetch('/api/chat/friend-request/respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestId, status: 'declined' })
+    }).catch(() => {});
+
+    addToast(lang === 'fr' ? 'Demande refusée' : 'تم رفض طلب الصداقة', 'info');
+  };
+
 
   const addNotification = async (notifData: Omit<NotificationItem, 'id' | 'createdAt' | 'isActive'>) => {
     const id = `notif-${Date.now()}`;
@@ -1403,6 +1821,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateAllFloatingAds,
         isFeaturedModalOpen,
         setIsFeaturedModalOpen,
+        featuredModalApp,
+        setFeaturedModalApp,
+        openFeaturedModal,
         notifications,
         toasts,
         addToast,
@@ -1417,7 +1838,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsChatOpen,
         activeChatUserId,
         setActiveChatUserId,
-        openChatWithUser
+        openChatWithUser,
+        ensureUserSession,
+        friendRequests,
+        sendFriendRequest,
+        acceptFriendRequest,
+        declineFriendRequest,
+        isFriend
       }}
     >
       {children}

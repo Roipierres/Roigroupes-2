@@ -433,12 +433,24 @@ export const initialReviews: ReviewItem[] = [
 
 export const initialUsers: UserAccount[] = [
   {
+    id: 'user-admin',
+    name: 'الدعم الفني والإدارة (RoiGroupeS)',
+    email: 'admin@roigroupes.com',
+    avatar: '/assets/aistudio/1793173133604_a080e212.jpg',
+    provider: 'admin',
+    role: 'admin',
+    phone: '+213797152590',
+    joinedDate: '2026-01-01',
+    status: 'active'
+  },
+  {
     id: 'user-manager',
     name: 'المدير العام (Manager)',
     email: 'manager@roigroupes.com',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
     provider: 'admin',
     role: 'admin',
+    phone: '+213797152590',
     joinedDate: '2026-01-01',
     status: 'active'
   },

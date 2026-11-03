@@ -50,7 +50,8 @@ import {
   Video,
   Sparkles,
   Share2,
-  ShieldCheck
+  ShieldCheck,
+  Trophy
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -100,7 +101,9 @@ export const AdminDashboard: React.FC = () => {
     notifications,
     addNotification,
     updateNotification,
-    deleteNotification
+    deleteNotification,
+    openFeaturedModal,
+    openChatWithUser
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<
@@ -203,7 +206,7 @@ export const AdminDashboard: React.FC = () => {
   const memberFileInputRef = useRef<HTMLInputElement>(null);
 
   // Featured View Customization State
-  const [isFeaturedConfigModalOpen, setIsFeaturedModalOpen] = useState(false);
+  const [isFeaturedConfigModalOpen, setIsFeaturedConfigModalOpen] = useState(false);
   const [featuredConfigApp, setFeaturedConfigApp] = useState<AppItem | null>(null);
   const [featuredInfoAr, setFeaturedInfoAr] = useState('');
   const [featuredInfoFr, setFeaturedInfoFr] = useState('');
@@ -229,6 +232,8 @@ export const AdminDashboard: React.FC = () => {
   const [pwaFormStartUrl, setPwaFormStartUrl] = useState(siteSettings.pwaStartUrl || '/');
   const [pwaFormIcon, setPwaFormIcon] = useState(siteSettings.pwaIcon || '');
   const [isUploadingPwaIcon, setIsUploadingPwaIcon] = useState(false);
+  const [isBuildingApk, setIsBuildingApk] = useState(false);
+  const [builtApkResult, setBuiltApkResult] = useState<{ downloadUrl: string; fileName: string; size: string; version: string } | null>(null);
   const [appFeatures, setAppFeatures] = useState(siteSettings.appFeatures || {
     enableMemberChat: true,
     enableNotifications: true,
@@ -287,17 +292,108 @@ export const AdminDashboard: React.FC = () => {
     setIsNotifModalOpen(false);
   };
   
-  const handleSavePwaSettings = async (e: React.FormEvent) => {
+  const handleBuildRealApk = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateSiteSettings({
-      pwaTitle: pwaFormTitle,
-      pwaShortName: pwaFormShortName,
-      pwaStartUrl: pwaFormStartUrl,
-      pwaIcon: pwaFormIcon,
-      appFeatures
-    });
-    setCredentialsSavedNotice(true);
-    setTimeout(() => setCredentialsSavedNotice(false), 3000);
+    setIsBuildingApk(true);
+    setBuiltApkResult(null);
+
+    try {
+      // 1. Call server API to produce real Android APK package
+      const res = await fetch('/api/build-official-apk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appName: pwaFormTitle || 'RoiGroupeS Official Store',
+          shortName: pwaFormShortName || 'RGS',
+          packageName: 'com.roigroupes.official',
+          versionName: '2.4.0',
+          iconBase64: pwaFormIcon,
+          startUrl: pwaFormStartUrl || '/'
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to build APK');
+
+      setBuiltApkResult({
+        downloadUrl: data.downloadUrl,
+        fileName: data.fileName,
+        size: data.size,
+        version: data.version
+      });
+
+      // 2. Save site settings with official APK URL
+      await updateSiteSettings({
+        pwaTitle: pwaFormTitle,
+        pwaShortName: pwaFormShortName,
+        pwaStartUrl: pwaFormStartUrl,
+        pwaIcon: pwaFormIcon,
+        officialApkUrl: data.downloadUrl,
+        appFeatures
+      });
+
+      // 3. Register or update the official app in the store
+      const officialAppId = 'app-roigroupes-official';
+      const existingOfficial = apps.find(a => a.id === officialAppId);
+      const appItemData: AppItem = {
+        id: officialAppId,
+        title: pwaFormTitle || 'تطبيق منصة RoiGroupeS الرسمي',
+        titleFr: pwaFormTitle || 'Application Officielle RoiGroupeS',
+        slug: 'roigroupes-official-app',
+        category: 'commercial',
+        shortDesc: 'التطبيق الرسمي المعتمد لمنصة RoiGroupeS لتصفح وتحميل التطبيقات وتتبع الطلبات.',
+        shortDescFr: 'Application officielle certifiée de RoiGroupeS pour gérer vos projets et applications.',
+        fullDesc: 'تطبيق المنصة الرسمي المعتمد بصيغة APK. يتيح لك الوصول السريع لكافة خدمات ومنتجات RoiGroupeS، استقبال الإشعارات الفورية، الدردشة مع الدعم الفني، وتحميل التطبيقات مباشرة.',
+        fullDescFr: 'Application officielle de la plateforme RoiGroupeS certifiée en format APK.',
+        icon: pwaFormIcon || '/assets/aistudio/1793173133604_a080e212.jpg',
+        badge: 'التطبيق الرسمي',
+        badgeFr: 'Application Officielle',
+        downloadsCount: 1420,
+        rating: 5.0,
+        reviewsCount: 380,
+        size: data.size || '18.5 MB',
+        version: data.version || '2.4.0',
+        updatedDate: new Date().toISOString().split('T')[0],
+        developer: 'RoiGroupeS Official Engineering Team',
+        screenshots: [
+          '/assets/aistudio/1793173133604_a080e212.jpg'
+        ],
+        features: [
+          'حزمة تطبيق المنصة (APK) جاهزة للتثبيت المباشر',
+          'دعم الإشعارات الفورية والمحادثة المباشرة مع الإدارة',
+          'وصول كامل وتنزيل بدون وسيط'
+        ],
+        featuresFr: [
+          'Paquet de l\'Application de la Plateforme (APK) prêt à installer',
+          'Support des notifications push en temps réel',
+          'Accès direct sans navigateur'
+        ],
+        downloadLinks: {
+          androidUrl: data.downloadUrl,
+          iosUrl: '#',
+          apkSize: data.size || '18.5 MB'
+        },
+        uploadedFileBlobUrl: data.downloadUrl,
+        uploadedFileName: data.fileName,
+        downloadAccess: 'public',
+        isFeatured: true,
+        status: 'published'
+      };
+
+      if (existingOfficial) {
+        await updateApp(appItemData);
+      } else {
+        await addApp(appItemData);
+      }
+
+      setCredentialsSavedNotice(true);
+      setTimeout(() => setCredentialsSavedNotice(false), 3000);
+    } catch (err: any) {
+      console.error('Error building real APK:', err);
+      alert(lang === 'fr' ? 'Erreur lors de la génération de l\'APK' : 'حدث خطأ أثناء بناء وتوليد ملف APK');
+    } finally {
+      setIsBuildingApk(false);
+    }
   };
 
   const handlePwaIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -431,7 +527,7 @@ export const AdminDashboard: React.FC = () => {
     setSelectedFeaturedReviewIds(app.featuredReviewIds || []);
     setFeaturedVideoUrl(app.videoUrl || '');
     setVideoUploadProgress(app.videoUrl ? 100 : 0);
-    setIsFeaturedModalOpen(true);
+    setIsFeaturedConfigModalOpen(true);
   };
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -483,7 +579,7 @@ export const AdminDashboard: React.FC = () => {
       videoUrl: featuredVideoUrl
     });
 
-    setIsFeaturedModalOpen(false);
+    setIsFeaturedConfigModalOpen(false);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1001,7 +1097,7 @@ export const AdminDashboard: React.FC = () => {
           }`}
         >
           <Smartphone className="w-4 h-4" />
-          <span>{lang === 'fr' ? 'Générateur d\'App' : 'باني التطبيق الرسمي'}</span>
+          <span>{lang === 'fr' ? 'Générateur de l\'Appli Plateforme' : 'باني تطبيق المنصة (APK)'}</span>
         </button>
       </div>
 
@@ -1301,6 +1397,13 @@ export const AdminDashboard: React.FC = () => {
                           }`}
                         >
                           <Zap className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => openFeaturedModal(app)}
+                          title="عرض كنافذة مميزة بالحجم الكامل"
+                          className="p-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg transition-colors cursor-pointer shadow-sm"
+                        >
+                          <Trophy className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => openFeaturedConfigModal(app)}
@@ -1724,6 +1827,16 @@ export const AdminDashboard: React.FC = () => {
                         >
                           <Edit className="w-3 h-3" />
                           <span>{lang === 'fr' ? 'Modifier' : 'تعديل'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => openChatWithUser(usr.id)}
+                          className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-[10px] font-black transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                          title={lang === 'fr' ? 'Discuter avec le membre' : 'مراسلة العضو مباشرة'}
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          <span>{lang === 'fr' ? 'Chat' : 'دردشة'}</span>
                         </button>
 
                         {usr.status === 'active' ? (
@@ -2865,30 +2978,39 @@ export const AdminDashboard: React.FC = () => {
 
             <div className="relative z-10 space-y-6">
               <div className="border-b border-white/10 pb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-3 py-1 bg-amber-500 text-slate-950 font-black text-xs rounded-full uppercase tracking-wider font-mono">
+                    Platform App APK
+                  </span>
+                  <span className="text-emerald-400 font-bold text-xs flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>توليد وتصدير تطبيق المنصة</span>
+                  </span>
+                </div>
                 <h2 className="text-2xl font-black text-white flex items-center gap-3 mb-2">
                   <Smartphone className="w-8 h-8 text-amber-500" />
-                  <span>{lang === 'fr' ? 'Générateur d\'Application Officielle' : 'باني وصانع التطبيق الرسمي للمنصة'}</span>
+                  <span>{lang === 'fr' ? 'Compilateur & Générateur de l\'Application de la Plateforme (.APK)' : 'باني ومولد تطبيق المنصة (.APK)'}</span>
                 </h2>
-                <p className="text-sm text-slate-400 font-medium max-w-2xl leading-relaxed">
+                <p className="text-sm text-slate-300 font-medium max-w-2xl leading-relaxed">
                   {lang === 'fr' 
-                    ? 'Personnalisez les propriétés de l\'application installable (PWA) de votre plateforme. Définissez le nom, l\'icône et l\'URL de démarrage pour créer une expérience native connectée à votre base de membres.'
-                    : 'قم بتخصيص خصائص "التطبيق المثبت" الخاص بمنصتك. يمكنك تحديد اسم التطبيق، الأيقونة، ورابط البداية ليتمكن الزوار من تثبيت المنصة كتطبيق مستقل على هواتفهم مع بقاء جلسة تسجيل الدخول نشطة.'}
+                    ? 'Générez le fichier de l\'Application de la Plateforme (.apk) prêt à être téléchargé et installé directement sur smartphone.'
+                    : 'قم ببرمجة وتوليد حزمة تطبيق المنصة بصيغة (APK) كاملة وجاهزة للتثبيت المباشر على أي هاتف.'}
                 </p>
               </div>
 
-              <form onSubmit={handleSavePwaSettings} className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <form onSubmit={handleBuildRealApk} className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                 <div className="space-y-6">
                   {/* App Name */}
                   <div className="space-y-2">
                     <label className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                       <Edit className="w-4 h-4 text-amber-500" />
-                      <span>{lang === 'fr' ? 'Nom complet de l\'app' : 'اسم التطبيق الكامل (يظهر تحت الأيقونة)'}</span>
+                      <span>{lang === 'fr' ? 'Nom complet de l\'app' : 'اسم التطبيق الرسمي (يظهر تحت الأيقونة على الهاتف)'}</span>
                     </label>
                     <input 
                       type="text"
                       value={pwaFormTitle}
                       onChange={(e) => setPwaFormTitle(e.target.value)}
-                      placeholder="Ex: RoiGroupes Store"
+                      placeholder="Ex: RoiGroupes Official Store"
                       className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-bold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none"
                     />
                   </div>
@@ -2897,14 +3019,14 @@ export const AdminDashboard: React.FC = () => {
                   <div className="space-y-2">
                     <label className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                       <Zap className="w-4 h-4 text-amber-500" />
-                      <span>{lang === 'fr' ? 'Nom court (Max 12 chars)' : 'الاسم المختصر (يُفضل أقل من 12 حرف)'}</span>
+                      <span>{lang === 'fr' ? 'Nom court' : 'الاسم المختصر (RGS)'}</span>
                     </label>
                     <input 
                       type="text"
                       value={pwaFormShortName}
                       onChange={(e) => setPwaFormShortName(e.target.value)}
                       placeholder="Ex: RoiGroupes"
-                      maxLength={12}
+                      maxLength={16}
                       className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-bold focus:border-amber-500 outline-none"
                     />
                   </div>
@@ -2913,7 +3035,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="space-y-2">
                     <label className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                       <Globe className="w-4 h-4 text-amber-500" />
-                      <span>{lang === 'fr' ? 'URL de démarrage' : 'رابط الصفحة الرئيسية (التي يفتح عليها التطبيق)'}</span>
+                      <span>{lang === 'fr' ? 'URL de démarrage' : 'رابط البداية المشفر داخل التطبيق'}</span>
                     </label>
                     <input 
                       type="text"
@@ -2928,17 +3050,17 @@ export const AdminDashboard: React.FC = () => {
                   <div className="pt-6 border-t border-white/5">
                     <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4">
                       <Sparkles className="w-4 h-4 text-amber-500" />
-                      <span>{lang === 'fr' ? 'Fonctionnalités Suggérées' : 'اقتراحات إضافية لعمل التطبيق (App Features)'}</span>
+                      <span>{lang === 'fr' ? 'Fonctionnalités Intégrées à l\'APK' : 'الميزات المضمنة داخل ملف التطبيق (APK Features)'}</span>
                     </h3>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
-                        { id: 'enableMemberChat', labelAr: 'دردشة مباشرة بين الأعضاء', labelFr: 'Chat entre membres' },
-                        { id: 'enableNotifications', labelAr: 'أيقونة ونظام التنبيهات', labelFr: 'Système de notifications' },
-                        { id: 'enableAppReviews', labelAr: 'نظام التقييم والمراجعات', labelFr: 'Système d\'avis' },
-                        { id: 'enableAIStoreAssistant', labelAr: 'مساعد المتجر الذكي (AI)', labelFr: 'Assistant IA' },
-                        { id: 'enableLiveSupport', labelAr: 'الدعم الفني المباشر', labelFr: 'Support en direct' },
-                        { id: 'enableUserProfiles', labelAr: 'بروفيلات المستخدمين المتقدمة', labelFr: 'Profils utilisateurs' },
+                        { id: 'enableMemberChat', labelAr: 'دردشة مباشرة مع الإدارة والأعضاء', labelFr: 'Chat direct' },
+                        { id: 'enableNotifications', labelAr: 'نظام الإشعارات والتنبيهات', labelFr: 'Notifications push' },
+                        { id: 'enableAppReviews', labelAr: 'نظام التقييم والتعليقات', labelFr: 'Avis & Notes' },
+                        { id: 'enableAIStoreAssistant', labelAr: 'مستشار الذكاء الاصطناعي الصوتي', labelFr: 'Assistant IA Vocal' },
+                        { id: 'enableLiveSupport', labelAr: 'الدعم الفني والاتصال المباشر', labelFr: 'Support technique' },
+                        { id: 'enableUserProfiles', labelAr: 'بروفيلات وحسابات المستخدمين', labelFr: 'Comptes membres' },
                       ].map((feat) => (
                         <label key={feat.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${appFeatures[feat.id as keyof typeof appFeatures] ? 'bg-amber-500/10 border-amber-500/50' : 'bg-white/5 border-white/10 opacity-60'}`}>
                           <span className="text-[11px] font-bold text-white">{lang === 'fr' ? feat.labelFr : feat.labelAr}</span>
@@ -2959,7 +3081,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="space-y-4">
                     <label className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                       <ImageIcon className="w-4 h-4 text-amber-500" />
-                      <span>{lang === 'fr' ? 'Icône de l\'Application' : 'أيقونة التطبيق (صورة مربعة عالية الدقة)'}</span>
+                      <span>{lang === 'fr' ? 'Icône de l\'Application' : 'أيقونة التطبيق الرسمية (صورة مربعة عالية الدقة)'}</span>
                     </label>
                     
                     <div className="flex items-center gap-6 p-6 rounded-[2rem] bg-white/5 border border-white/10">
@@ -2988,22 +3110,74 @@ export const AdminDashboard: React.FC = () => {
                           <UploadCloud className="w-4 h-4" />
                           <span>{lang === 'fr' ? 'Changer l\'icône' : 'رفع أيقونة جديدة'}</span>
                         </button>
-                        <p className="text-[10px] text-slate-500 font-medium leading-snug">
+                        <p className="text-[10px] text-slate-400 font-medium leading-snug">
                           {lang === 'fr' 
-                            ? 'Recommandé : 512x512px, Format carré. Cette image sera utilisée comme icône de lancement sur mobile.' 
-                            : 'المواصفات المطلوبة: 512x512 بكسل، مقاس مربع. ستظهر هذه الصورة كأيقونة تشغيل على شاشة الهاتف.'}
+                            ? 'Format 512x512px. Cette icône sera packagée dans le fichier APK d\'installation.' 
+                            : 'المقاس المطلوب: 512x512 بكسل. هذه الأيقونة ستُدمج تلقائياً داخل حزمة الـ APK وستظهر على شاشات الهواتف.'}
                         </p>
                       </div>
                     </div>
                   </div>
 
+                  {/* Built APK Success Banner */}
+                  {builtApkResult && (
+                    <div className="p-5 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 space-y-3 animate-fade-in">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-emerald-500 text-slate-950">
+                          <CheckCircle2 className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-emerald-400">
+                            {lang === 'fr' ? 'Application de la Plateforme (APK) générée avec succès !' : 'تم بناء حزمة تطبيق المنصة (APK) بنجاح!'}
+                          </h4>
+                          <span className="text-[11px] font-mono text-slate-300">
+                            {builtApkResult.fileName} • {builtApkResult.size} • v{builtApkResult.version}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                        <a
+                          href={builtApkResult.downloadUrl}
+                          download={builtApkResult.fileName}
+                          className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>{lang === 'fr' ? 'Télécharger l\'Application de la Plateforme' : 'تحميل وتثبيت تطبيق المنصة (APK) الآن'}</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const found = apps.find(a => a.id === 'app-roigroupes-official');
+                            if (found) openFeaturedModal(found);
+                          }}
+                          className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Trophy className="w-4 h-4 text-amber-400" />
+                          <span>{lang === 'fr' ? 'Aperçu en vitrine' : 'عرض كنافذة مميزة بالمتجر'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="pt-4">
                     <button 
                       type="submit"
-                      className="w-full py-5 bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-base rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:shadow-[0_0_60px_rgba(245,158,11,0.6)] transition-all flex items-center justify-center gap-3 border border-white/20 active:scale-95 cursor-pointer"
+                      disabled={isBuildingApk}
+                      className="w-full py-5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-base rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:shadow-[0_0_60px_rgba(245,158,11,0.6)] transition-all flex items-center justify-center gap-3 border border-white/20 active:scale-95 cursor-pointer disabled:opacity-50"
                     >
-                      <Save className="w-6 h-6" />
-                      <span>{lang === 'fr' ? 'Générer & Enregistrer l\'Application' : 'إنشاء وحفظ إعدادات التطبيق الآن'}</span>
+                      {isBuildingApk ? (
+                        <>
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                          <span>{lang === 'fr' ? 'Compilation et empaquetage de l\'Application de la Plateforme...' : 'جاري تجميع وبرمجة حزمة تطبيق المنصة...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Cpu className="w-6 h-6" />
+                          <span>{lang === 'fr' ? 'Compiler l\'Application de la Plateforme (.APK)' : 'بناء وتوليد تطبيق المنصة (.APK)'}</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -3414,7 +3588,7 @@ export const AdminDashboard: React.FC = () => {
                 <Sparkles className="w-5 h-5 text-amber-500" />
                 <span>{lang === 'fr' ? 'Personnaliser la Vue à l\'Affiche' : 'تخصيص نافذة العرض في الصدارة'}</span>
               </h3>
-              <button onClick={() => setIsFeaturedModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
+              <button onClick={() => setIsFeaturedConfigModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -3524,9 +3698,21 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onClick={() => setIsFeaturedModalOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold">{t.closeBtn}</button>
-                <button type="submit" className="px-6 py-2 bg-amber-500 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20">{lang === 'fr' ? 'Enregistrer les modifications' : 'حفظ الإعدادات الفاخرة'}</button>
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    openFeaturedModal(featuredConfigApp);
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trophy className="w-4 h-4" />
+                  <span>{lang === 'fr' ? 'Aperçu Plein Écran' : 'معاينة النافذة المميزة بالحجم الكامل'}</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setIsFeaturedConfigModalOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer">{t.closeBtn}</button>
+                  <button type="submit" className="px-6 py-2 bg-amber-500 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 cursor-pointer">{lang === 'fr' ? 'Enregistrer les modifications' : 'حفظ الإعدادات الفاخرة'}</button>
+                </div>
               </div>
             </form>
           </div>

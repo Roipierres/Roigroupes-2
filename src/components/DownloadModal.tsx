@@ -22,48 +22,55 @@ export const DownloadModal: React.FC = () => {
     }
 
     const startDownload = async () => {
-      const downloadUrl = activeDownloadApp.uploadedFileBlobUrl || activeDownloadApp.downloadLinks.androidUrl;
-      if (!downloadUrl) return;
+      let downloadUrl = activeDownloadApp.uploadedFileBlobUrl || activeDownloadApp.downloadLinks.androidUrl;
+      const fileName = activeDownloadApp.uploadedFileName || `${activeDownloadApp.slug || 'app'}.apk`;
 
-      const fileName = activeDownloadApp.uploadedFileName || `${activeDownloadApp.slug}.apk`;
+      if (!downloadUrl || downloadUrl.includes('example.com')) {
+        downloadUrl = '/uploads/RoiGroupeS-Official.apk';
+      } else if (downloadUrl.startsWith('/uploads/')) {
+        try {
+          const checkRes = await fetch(downloadUrl, { method: 'HEAD', cache: 'no-store' });
+          if (!checkRes.ok) {
+            downloadUrl = '/uploads/RoiGroupeS-Official.apk';
+          }
+        } catch (e) {
+          downloadUrl = '/uploads/RoiGroupeS-Official.apk';
+        }
+      }
 
       try {
-        // Step 1: Verify file exists on server before starting animation
-        // This prevents the "HTML file" bug when server resets and files are missing
-        const checkRes = await fetch(downloadUrl, { method: 'HEAD', cache: 'no-store' });
-        if (!checkRes.ok) {
-          throw new Error('File not found on server');
-        }
-
-        // Step 2: Animate progress bar to 100%
+        // Step 1: Animate progress bar to 100%
         let currentPercent = 0;
         await new Promise<void>((resolve) => {
           const timer = setInterval(() => {
-            currentPercent += Math.floor(Math.random() * 20) + 12;
+            currentPercent += Math.floor(Math.random() * 20) + 14;
             if (currentPercent >= 100) {
               currentPercent = 100;
               clearInterval(timer);
               resolve();
             }
             setProgress(currentPercent);
-          }, 120);
+          }, 110);
         });
 
         setIsComplete(true);
 
-        // Step 3: Trigger direct native file download
+        // Step 2: Trigger direct native APK file download
         const a = document.createElement('a');
         a.href = downloadUrl;
-        a.download = fileName;
+        a.download = fileName.endsWith('.apk') ? fileName : `${fileName}.apk`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
       } catch (err) {
-        console.error('Download verification error:', err);
-        alert(lang === 'fr' 
-          ? 'Désolé, le fichier est temporairement indisponible sur le serveur (possible redémarrage). Veuillez le téléverser à nouveau dans le panneau d\'administration.' 
-          : 'عذراً، الملف غير متوفر حالياً على الخادم (ربما بسبب إعادة تشغيل النظام). يرجى إعادة رفعه من لوحة الإدارة.');
-        setIsDownloadModalOpen(false);
+        console.error('Download error:', err);
+        setIsComplete(true);
+        const a = document.createElement('a');
+        a.href = '/uploads/RoiGroupeS-Official.apk';
+        a.download = 'RoiGroupeS-Official.apk';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
     };
 

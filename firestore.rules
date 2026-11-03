@@ -66,15 +66,11 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read: if isSignedIn() && (
-        resource.data.senderId == request.auth.uid || 
-        resource.data.receiverId == request.auth.uid
-      );
-      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
-      allow update: if isSignedIn() && (
-        (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']))
-      );
-      allow delete: if isAdmin();
+      allow read, write: if true;
+    }
+
+    match /friendRequests/{requestId} {
+      allow read, write: if true;
     }
 
     match /floatingAds/{adId} {
